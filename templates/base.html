@@ -3,16 +3,21 @@
 
 <head>
   <meta charset="utf-8">
-  <link rel="stylesheet" type="text/css" href="/syntax-theme-dark.css" media="(prefers-color-scheme: dark)" />
-  <link rel="stylesheet" type="text/css" href="/syntax-theme-light.css" media="(prefers-color-scheme: light)" />
+
+  <!-- Handle mobile devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" type="text/css" href="{{ get_url(path="syntax-theme-dark.css") | safe }}" media="(prefers-color-scheme: dark)" />
+  <link rel="stylesheet" type="text/css" href="{{ get_url(path="syntax-theme-light.css") | safe }}" media="(prefers-color-scheme: light)" />
+  <link rel="stylesheet" type="text/css" href="{{ get_url(path="site.css", cachebust=config.mode == "serve") | safe }}" />
 </head>
 
 <body>
-  <section class="section">
-    <div class="container">
-      {% block content %} {% endblock content %}
+  <main>
+    <div class="content">
+    {% block content %}{% endblock content %}
     </div>
-  </section>
+  </main>
 </body>
 
 </html>

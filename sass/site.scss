@@ -1,0 +1,10 @@
+body {
+  main {
+    display: flex;
+    justify-content: center;
+
+    .content {
+      flex-basis: 50%;
+    }
+  }
+}
