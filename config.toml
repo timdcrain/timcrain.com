@@ -2,14 +2,14 @@ base_url = "https://timcrain.com"
 compile_sass = true
 build_search_index = true
 
-[markdown]
-highlight_code = true
-highlight_theme = "css"
-highlight_themes_css = [
-    { theme = "base16-tomorrow-night", filename = "syntax-theme-dark.css" },
-    { theme = "base16-tomorrow", filename = "syntax-theme-light.css" },
+[markdown.highlighting]
+error_on_missing_language = true
+dark_theme = "base16-tomorrow-night"
+light_theme = "base16-tomorrow"
+extra_themes = [
+    "highlight_themes/base16-tomorrow-night.json",
+    "highlight_themes/base16-tomorrow.json",
 ]
-extra_syntaxes_and_themes = ["highlight_themes/base16-textmate/Themes"]
 
 [extra]
-# Put all your custom variables here
+author = "Timothy Crain"
