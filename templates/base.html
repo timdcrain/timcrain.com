@@ -7,15 +7,53 @@
   <!-- Handle mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <title>
+    {% if page.title %}
+      {{ page.title }}
+    {% elif section.title %}
+      {{ section.title }}
+    {% else %}
+      {{ config.title }}
+    {% endif %}
+  </title>
+
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="{{ get_url(path="atom.xml", trailing_slash=false) }}">
   <link rel="stylesheet" type="text/css" href="{{ get_url(path="site.css", cachebust=config.mode == "serve") | safe }}" />
 </head>
 
 <body>
+  <header>
+    <nav>
+      <ul>
+        <li><a href="{{ get_url(path="@/_index.md") }}">about</a></li>
+        <!--<li><a href="{{ get_url(path="@/posts/_index.md") }}">posts</a></li>-->
+      </ul>
+
+      <!--
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <a href="/atom.xml" target="_blank">
+          <rect x="0" y="25" width="75" height="75" fill="transparent" />
+          <circle cx="10" cy="90" r="8" fill="currentColor" />
+          <path d="M10,60 A30,30 0 0,1 40,90" stroke="currentColor" stroke-width="10" fill="none" />
+          <path d="M10,35 A55,55 0 0,1 65,90" stroke="currentColor" stroke-width="10" fill="none" />
+        </a>
+      </svg>
+      -->
+    </nav>
+  </header>
+
   <main>
-    <div class="content">
+    <section class="content">
     {% block content %}{% endblock content %}
-    </div>
+    </section>
   </main>
+
+  <footer>
+    &copy 2026 {{ config.author }}. Content on this site is licensed under
+    &nbsp;<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
+    <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="">
+    <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="">
+  </footer>
 </body>
 
 </html>

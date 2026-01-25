@@ -1,3 +1,7 @@
+$bg: light-dark(#ffffff, #1d1f21);
+$fg: light-dark(#4d4d4c, #c5c8c6);
+$accent: light-dark(#eab700ff, #f0c674ff);
+
 .giallo {
   padding: 1em;
 }
@@ -18,13 +22,87 @@
     opacity: 0.8;
 }
 
+ul.posts {
+  list-style-type: none;
+
+  a {
+    font-weight: bold;
+  }
+
+  time {
+    font-size: smaller;
+    font-weight: lighter;
+    margin-left: 4em;
+  }
+}
+
+a, a:visited, a:active {
+  color: inherit;
+}
+
+a:hover {
+  color: $accent;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
 body {
+  background-color: $bg;
+  color: $fg;
+  margin: 0;
+  padding: 0;
+
+  header {
+    display: flex;
+    justify-content: center;
+
+    a {
+      text-decoration: none;
+    }
+
+    svg {
+      width: 1.5em;
+      height: 1.5em;
+      float: right;
+      padding: 10px 0 10px 0;
+    }
+
+    nav {
+      flex-basis: 50%;
+
+      ul {
+        display: inline flex;
+        list-style-type: none;
+        margin: inherit;
+        padding: inherit;
+
+        li {
+          padding: 10px 20px 10px 0;
+        }
+      }
+    }
+  }
+
   main {
     display: flex;
     justify-content: center;
 
     .content {
-      flex-basis: 50%;
+      flex-basis: 46%;
+    }
+  }
+
+  footer {
+    display: flex;
+    justify-content: center;
+    font-size: smaller;
+
+    img {
+      max-width: 1em;
+      max-height: 1em;
+      margin-left: .4em;
     }
   }
 }

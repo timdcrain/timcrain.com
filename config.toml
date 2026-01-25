@@ -1,6 +1,14 @@
 base_url = "https://timcrain.com"
+author = "Timothy Crain"
+title = "Tim Crain"
+
 compile_sass = true
-build_search_index = true
+generate_feeds = true
+
+[markdown]
+external_links_target_blank = true
+bottom_footnotes = true
+insert_anchor_links = "heading"
 
 [markdown.highlighting]
 error_on_missing_language = true
@@ -10,6 +18,3 @@ extra_themes = [
     "highlight_themes/base16-tomorrow-night.json",
     "highlight_themes/base16-tomorrow.json",
 ]
-
-[extra]
-author = "Timothy Crain"
