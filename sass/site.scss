@@ -51,8 +51,6 @@ a:hover {
 body {
   background-color: $bg;
   color: $fg;
-  margin: 0;
-  padding: 0;
 
   header {
     display: flex;
@@ -70,7 +68,13 @@ body {
     }
 
     nav {
-      flex-basis: 50%;
+      @media (max-width: 768px) {
+        flex-basis: 100%;
+      }
+
+      @media (min-width: 768px) {
+        flex-basis: 50%;
+      }
 
       ul {
         display: inline flex;
@@ -90,7 +94,13 @@ body {
     justify-content: center;
 
     .content {
-      flex-basis: 46%;
+      @media (max-width: 768px) {
+        flex-basis: 100%;
+      }
+
+      @media (min-width: 768px) {
+        flex-basis: 46%;
+      }
     }
   }
 
@@ -102,7 +112,6 @@ body {
     img {
       max-width: 1em;
       max-height: 1em;
-      margin-left: .4em;
     }
   }
 }
