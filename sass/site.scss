@@ -69,7 +69,7 @@ body {
 
     nav {
       @media (max-width: 768px) {
-        flex-basis: 100%;
+        flex-basis: 96%;
       }
 
       @media (min-width: 768px) {
@@ -95,7 +95,7 @@ body {
 
     .content {
       @media (max-width: 768px) {
-        flex-basis: 100%;
+        flex-basis: 96%;
       }
 
       @media (min-width: 768px) {
@@ -108,6 +108,16 @@ body {
     display: flex;
     justify-content: center;
     font-size: smaller;
+
+    p {
+      @media (max-width: 768px) {
+        flex-basis: 96%;
+      }
+
+      @media (min-width: 768px) {
+        flex-basis: 46%;
+      }
+    }
 
     img {
       max-width: 1em;
