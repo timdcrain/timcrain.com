@@ -24,6 +24,7 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 
 ul.posts {
   list-style-type: none;
+  padding: 0;
 
   a {
     font-weight: bold;
@@ -32,7 +33,8 @@ ul.posts {
   time {
     font-size: smaller;
     font-weight: lighter;
-    margin-left: 4em;
+    font-style: italic;
+    margin-left: 2em;
   }
 }
 
@@ -55,6 +57,7 @@ body {
   header {
     display: flex;
     justify-content: center;
+    padding: 0 2%;
 
     a {
       text-decoration: none;
@@ -68,8 +71,10 @@ body {
     }
 
     nav {
+      max-width: 800px;
+
       @media (max-width: 768px) {
-        flex-basis: 96%;
+        flex-basis: 100%;
       }
 
       @media (min-width: 768px) {
@@ -92,32 +97,29 @@ body {
   main {
     display: flex;
     justify-content: center;
+    padding: 0 2%;
 
     .content {
+      max-width: 800px;
+
       @media (max-width: 768px) {
-        flex-basis: 96%;
+        flex-basis: 100%;
       }
 
       @media (min-width: 768px) {
-        flex-basis: 46%;
+        flex-basis: 50%;
+      }
+
+      p {
+        line-height: 1.6;
       }
     }
   }
 
   footer {
-    display: flex;
-    justify-content: center;
-    font-size: smaller;
-
-    p {
-      @media (max-width: 768px) {
-        flex-basis: 96%;
-      }
-
-      @media (min-width: 768px) {
-        flex-basis: 46%;
-      }
-    }
+    text-align: center;
+    font-size: small;
+    padding: 0 2%;
 
     img {
       max-width: 1em;

@@ -5,7 +5,7 @@
 {% for page in section.pages %}
   <li>
     <a href="{{ page.permalink | safe }}">{{ page.title }}</a>
-    <time datetime="{{ page.date }}">{{ page.date | date(format="%B %d, %Y") }}</time>
+    <time datetime="{{ page.date }}" class="post-time">{{ page.date | date(format="%b %d, %Y") }}</time>
   </li>
 {% endfor %}
 </ul>
