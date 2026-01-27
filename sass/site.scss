@@ -81,6 +81,10 @@ body {
         flex-basis: 50%;
       }
 
+      h2 {
+        display: inline flex;
+      }
+
       ul {
         display: inline flex;
         list-style-type: none;
