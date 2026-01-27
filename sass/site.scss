@@ -22,19 +22,23 @@ $accent: light-dark(#eab700ff, #f0c674ff);
     opacity: 0.8;
 }
 
+.post-time {
+  font-size: smaller;
+  font-weight: lighter;
+  font-style: italic;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+}
+
 ul.posts {
   list-style-type: none;
   padding: 0;
 
   a {
     font-weight: bold;
-  }
-
-  time {
-    font-size: smaller;
-    font-weight: lighter;
-    font-style: italic;
-    margin-left: 2em;
+    margin-right: 2em;
   }
 }
 
@@ -67,7 +71,6 @@ body {
       width: 1.5em;
       height: 1.5em;
       float: right;
-      padding: 10px 0 10px 0;
     }
 
     nav {
