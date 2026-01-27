@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 
 {% block content %}
-<ul class="posts">
 {% for page in section.pages %}
-  <li>
-    <a href="{{ page.permalink | safe }}">{{ page.title }}</a>
-    <time datetime="{{ page.date }}" class="post-time">{{ page.date | date(format="%b %d, %Y") }}</time>
-  </li>
+<div>
+  <h2><a href="{{ page.permalink | safe }}">{{ page.title }}</a></h2>
+  <div class="post-time">
+    <time datetime="{{ page.date }}">{{ page.date | date(format="%b %d, %Y") }}</time>
+    {% if page.updated %}
+    (<time datetime="{{ page.updated }}">Updated {{ page.updated | date(format="%b %d, %Y") }}</time>)
+    {% endif %}
+  </div>
+
+  {{ page.summary | safe }}
+</div>
 {% endfor %}
-</ul>
 {% endblock content %}
