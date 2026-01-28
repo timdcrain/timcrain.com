@@ -8,6 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>
+    {% block title %}
     {% if page.title %}
       {{ page.title }}
     {% elif section.title %}
@@ -15,6 +16,7 @@
     {% else %}
       {{ config.title }}
     {% endif %}
+    {% endblock title %}
   </title>
 
   <link rel="alternate" type="application/atom+xml" title="RSS" href="{{ get_url(path="atom.xml", trailing_slash=false) }}">
