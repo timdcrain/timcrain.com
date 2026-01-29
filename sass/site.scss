@@ -73,10 +73,11 @@ a:hover {
 body {
   background-color: $bg;
   color: $fg;
+  display: grid;
+  justify-content: center;
 
   header {
-    display: flex;
-    justify-content: center;
+    max-width: 680px;
     padding: 0 2%;
 
     a {
@@ -90,15 +91,6 @@ body {
     }
 
     nav {
-      max-width: 800px;
-
-      @media (max-width: 768px) {
-        flex-basis: 100%;
-      }
-
-      @media (min-width: 768px) {
-        flex-basis: 50%;
-      }
 
       h2 {
         display: inline flex;
@@ -121,24 +113,11 @@ body {
   }
 
   main {
-    display: flex;
-    justify-content: center;
+    max-width: 680px;
     padding: 0 2%;
 
-    .content {
-      max-width: 800px;
-
-      @media (max-width: 768px) {
-        flex-basis: 100%;
-      }
-
-      @media (min-width: 768px) {
-        flex-basis: 50%;
-      }
-
-      p {
-        line-height: 1.6;
-      }
+    .content p {
+      line-height: 1.6;
     }
   }
 
