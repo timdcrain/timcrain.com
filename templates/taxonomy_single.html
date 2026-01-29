@@ -6,17 +6,6 @@
 
 {% block content %}
 {% for page in term.pages %}
-<div>
-  <h2><a href="{{ page.permalink | safe }}">{{ page.title }}</a></h2>
-  <div class="post-time">
-    <time datetime="{{ page.date }}">{{ page.date | date(format="%b %d, %Y") }}</time>
-    {% if page.updated %}
-    (<time datetime="{{ page.updated }}">Updated {{ page.updated | date(format="%b %d, %Y") }}</time>)
-    {% endif %}
-  </div>
-
-  {{ page.summary | safe }}
-  &hellip;
-</div>
+  {% include "post_summary.html" %}
 {% endfor %}
 {% endblock content %}
