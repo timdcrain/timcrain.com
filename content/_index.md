@@ -1,4 +1,5 @@
 +++
+sort_by = "date"
 +++
 
 Hi I'm Tim. I'm a software engineer in Seattle, currently at Amazon. This site
