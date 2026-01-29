@@ -91,9 +91,11 @@ body {
     }
 
     nav {
+      display: grid;
+      grid-template-columns: auto auto;
+      justify-content: space-between;
 
       h2 {
-        display: inline flex;
         margin: 0;
       }
 
@@ -102,7 +104,6 @@ body {
         list-style-type: none;
         margin: inherit;
         padding: inherit;
-        float: right;
 
         li {
           padding-left: 1em;
@@ -124,6 +125,7 @@ body {
   footer {
     text-align: center;
     font-size: small;
+    max-width: 680px;
     padding: 0 2%;
 
     img {
