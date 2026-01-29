@@ -52,6 +52,12 @@ ul.terms {
   }
 }
 
+a {
+  text-underline-offset: 10%;
+  text-decoration-thickness: 10%;
+  text-decoration-color: $accent;
+}
+
 a, a:visited, a:active {
   color: inherit;
 }
