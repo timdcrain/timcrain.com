@@ -81,12 +81,12 @@ body {
 
     a {
       text-decoration: none;
+      font-weight: bold;
     }
 
     svg {
       width: 1.5em;
       height: 1.5em;
-      float: right;
     }
 
     nav {
@@ -110,9 +110,11 @@ body {
         list-style-type: none;
         margin: inherit;
         padding: inherit;
+        float: right;
 
         li {
-          padding: 10px 20px 10px 0;
+          padding-left: 1em;
+          align-content: center;
         }
       }
     }

@@ -27,14 +27,18 @@
   <header>
     <nav>
       <h2><a href="{{ get_url(path="@/_index.md") }}">{{ config.title | lower }}</a></h2>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-        <a href="/atom.xml" target="_blank">
-          <rect x="0" y="25" width="75" height="75" fill="transparent" />
-          <circle cx="10" cy="90" r="8" fill="currentColor" />
-          <path d="M10,60 A30,30 0 0,1 40,90" stroke="currentColor" stroke-width="10" fill="none" />
-          <path d="M10,35 A55,55 0 0,1 65,90" stroke="currentColor" stroke-width="10" fill="none" />
-        </a>
-      </svg>
+      <ul>
+        <li><a href="{{ get_url(path="@/posts/_index.md") }}">posts</a></li>
+        <li>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <a href="/atom.xml" target="_blank">
+              <rect x="0" y="25" width="75" height="75" fill="transparent" />
+              <circle cx="10" cy="90" r="8" fill="currentColor" />
+              <path d="M10,60 A30,30 0 0,1 40,90" stroke="currentColor" stroke-width="10" fill="none" />
+              <path d="M10,35 A55,55 0 0,1 65,90" stroke="currentColor" stroke-width="10" fill="none" />
+            </a>
+          </svg>
+        </li>
     </nav>
   </header>
 
