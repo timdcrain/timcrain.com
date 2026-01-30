@@ -5,6 +5,7 @@ $accent2: light-dark(#8e908c, #373b41);
 
 .giallo {
   padding: 1em;
+  font-family: "Source Code Pro", monospace;
 }
 
 .giallo-l {
@@ -37,24 +38,26 @@ $accent2: light-dark(#8e908c, #373b41);
   padding-right: 1em;
 }
 
+.post-title {
+  font-family: "Inter", sans-serif;
+  font-weight: bold;
+}
+
 h1.page-not-found {
   text-align: center;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Inter", sans-serif;
 }
 
 ul.posts {
   list-style-type: none;
   padding: 0;
-
-  a {
-    font-weight: bold;
-    margin-right: 2em;
-  }
 }
 
 ul.terms {
-  a {
-    font-weight: bold;
-  }
+  font-weight: bold;
 }
 
 a {
@@ -73,6 +76,7 @@ a:hover {
 
 :root {
   color-scheme: light dark;
+  font-family: "Source Serif 4", serif;
 }
 
 body {
@@ -95,6 +99,7 @@ body {
       display: grid;
       grid-template-columns: auto auto;
       justify-content: space-between;
+      font-family: "Inter", sans-serif;
 
       h2 {
         margin: 0;
