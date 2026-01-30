@@ -86,35 +86,33 @@ body {
   justify-content: center;
 
   header {
+    font-family: "Inter", sans-serif;
     max-width: 680px;
     padding: 0 2%;
-    font-weight: bold;
 
     svg {
+      display: flex;
       width: 1.5em;
       height: 1.5em;
     }
 
     nav {
       display: grid;
-      grid-template-columns: auto auto;
-      justify-content: space-between;
-      font-family: "Inter", sans-serif;
+      grid-template-columns: auto repeat(2, max-content);
 
-      h2 {
-        margin: 0;
+      > * {
+        align-self: end;
+        justify-self: end;
+        padding-left: 1em;
       }
 
-      ul {
-        display: inline flex;
-        list-style-type: none;
-        margin: inherit;
-        padding: inherit;
+      > *:nth-child(1) {
+        justify-self: start;
+        padding-left: 0;
+      }
 
-        li {
-          padding-left: 1em;
-          align-content: center;
-        }
+      h2, h3 {
+        margin: 0;
       }
     }
   }
