@@ -1,6 +1,7 @@
 $bg: light-dark(#ffffff, #1d1f21);
 $fg: light-dark(#4d4d4c, #c5c8c6);
 $accent: light-dark(#eab700ff, #f0c674ff);
+$accent2: light-dark(#8e908c, #373b41);
 
 .giallo {
   padding: 1em;
@@ -31,9 +32,9 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 }
 
 .post-time {
+  color: $accent2;
   font-size: smaller;
-  font-weight: lighter;
-  font-style: italic;
+  padding-right: 1em;
 }
 
 h1.page-not-found {
