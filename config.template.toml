@@ -1,4 +1,4 @@
-base_url = "https://127.0.0.1:1111"
+base_url = "${BASE_URL}"
 author = "Timothy Crain"
 title = "Tim Crain"
 
@@ -19,3 +19,7 @@ extra_themes = [
     "highlight_themes/base16-tomorrow-night.json",
     "highlight_themes/base16-tomorrow.json",
 ]
+
+[extra.analytics]
+id = "${ANALYTICS_ID}"
+url = "https://umami-proxy.timcrain.workers.dev/script.js"

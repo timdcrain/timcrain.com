@@ -4,9 +4,9 @@
 <head>
   <meta charset="utf-8">
 
-  {% if config.mode != "serve" %}
+  {% if config.extra.analytics is defined %}
   <!-- Analytics -->
-  <script async defer data-website-id="0a20ece8-5ff4-474b-bcd7-36a1d74fe5ce" src="https://umami-proxy.timcrain.workers.dev/script.js"></script>
+  <script async defer data-website-id="{{ config.extra.analytics.id }}" src="{{ config.extra.analytics.url }}"></script>
   {% endif %}
 
   <!-- Handle mobile devices -->
