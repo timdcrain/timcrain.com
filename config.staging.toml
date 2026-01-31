@@ -1,0 +1,21 @@
+base_url = "https://127.0.0.1:1111"
+author = "Timothy Crain"
+title = "Tim Crain"
+
+compile_sass = true
+generate_feeds = true
+
+[markdown]
+external_links_target_blank = true
+bottom_footnotes = true
+insert_anchor_links = "heading"
+smart_punctuation = true
+
+[markdown.highlighting]
+error_on_missing_language = true
+dark_theme = "base16-tomorrow-night"
+light_theme = "base16-tomorrow"
+extra_themes = [
+    "highlight_themes/base16-tomorrow-night.json",
+    "highlight_themes/base16-tomorrow.json",
+]
