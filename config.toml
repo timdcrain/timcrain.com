@@ -9,6 +9,7 @@ generate_feeds = true
 external_links_target_blank = true
 bottom_footnotes = true
 insert_anchor_links = "heading"
+smart_punctuation = true
 
 [markdown.highlighting]
 error_on_missing_language = true
