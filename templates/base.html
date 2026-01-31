@@ -6,7 +6,7 @@
 
   {% if config.extra.analytics is defined %}
   <!-- Analytics -->
-  <script async defer data-website-id="{{ config.extra.analytics.id }}" src="{{ config.extra.analytics.url }}"></script>
+  <script async defer data-website-id="{{ config.extra.analytics.id }}" src="{{ config.extra.analytics.url | safe }}"></script>
   {% endif %}
 
   <!-- Handle mobile devices -->
