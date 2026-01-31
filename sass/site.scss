@@ -83,11 +83,11 @@ body {
   background-color: $bg;
   color: $fg;
   display: grid;
+  grid-template-columns: minmax(auto, 680px);
   justify-content: center;
 
   header {
     font-family: "Inter", sans-serif;
-    max-width: 680px;
     padding: 0 2%;
 
     svg {
@@ -118,7 +118,6 @@ body {
   }
 
   main {
-    max-width: 680px;
     padding: 0 2%;
 
     p {
@@ -129,7 +128,6 @@ body {
   footer {
     text-align: center;
     font-size: small;
-    max-width: 680px;
     padding: 0 2%;
 
     img {
