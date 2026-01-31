@@ -4,6 +4,11 @@
 <head>
   <meta charset="utf-8">
 
+  {% if config.mode != "serve" %}
+  <!-- Analytics -->
+  <script async defer data-website-id="0a20ece8-5ff4-474b-bcd7-36a1d74fe5ce" src="https://umami-proxy.timcrain.workers.dev/script.js"></script>
+  {% endif %}
+
   <!-- Handle mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -20,7 +25,7 @@
   </title>
 
   <link rel="alternate" type="application/atom+xml" title="RSS" href="{{ get_url(path="atom.xml", trailing_slash=false) }}">
-  <link rel="stylesheet" type="text/css" href="{{ get_url(path="site.css", cachebust=config.mode == "serve") | safe }}" />
+  <link rel="stylesheet" type="text/css" href="{{ get_url(path="site.css", cachebust=config.mode == "serve") | safe }}">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
