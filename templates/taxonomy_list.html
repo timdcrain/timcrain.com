@@ -7,7 +7,7 @@
 {% block content %}
 <ul class="terms">
   {% for term in terms %}
-  <li><a href="{{ term.permalink | replace(from=config.base_url, to="/") | safe }}">{{ term.name }}</a></li>
+  <li><a href="{{ term.permalink | trim_start_matches(pat=config.base_url) | safe }}">{{ term.name }}</a></li>
   {% endfor %}
 </ul>
 {% endblock content %}

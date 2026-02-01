@@ -1,4 +1,4 @@
-<a href="{{ page.permalink | replace(from=config.base_url, to="/") | safe }}" class="summary">
+<a href="{{ page.permalink | trim_start_matches(pat=config.base_url) | safe }}" class="summary">
   <time datetime="{{ page.date }}" class="post-time">{{ page.date | date(format="%b %d, %Y") }}</time>
   <h3 class="summary-title">{{ page.title }}</h3>
   {% if page.extra.tagline is defined %}
