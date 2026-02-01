@@ -24,8 +24,8 @@
     {% endblock title %}
   </title>
 
-  <link rel="alternate" type="application/atom+xml" title="RSS" href="{{ get_url(path="atom.xml", trailing_slash=false) }}">
-  <link rel="stylesheet" type="text/css" href="{{ get_url(path="site.css", cachebust=config.mode == "serve") | safe }}">
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="{{ get_url(path="atom.xml") | replace(from=config.base_url, to="/") | safe }}">
+  <link rel="stylesheet" type="text/css" href="{{ get_url(path="site.css", cachebust=config.mode == "serve") | replace(from=config.base_url, to="/") | safe }}">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,8 +36,8 @@
 <body>
   <header>
     <nav>
-      <h2><a href="{{ get_url(path="@/_index.md") }}">{{ config.title | lower }}</a></h2>
-      <!--<h3><a href="{{ get_url(path="@/posts/_index.md") }}">posts</a></h3>-->
+      <h2><a href="{{ get_url(path="@/_index.md") | replace(from=config.base_url, to="/") | safe }}">{{ config.title | lower }}</a></h2>
+      <!--<h3><a href="{{ get_url(path="@/posts/_index.md") | replace(from=config.base_url, to="/") | safe }}">posts</a></h3>-->
       <a href="/atom.xml" target="_blank">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
           <rect x="10" y="19" width="71" height="71" fill="transparent" />
