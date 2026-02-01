@@ -1,11 +1,7 @@
+<time datetime="{{ page.date }}" class="post-time">{{ page.date | date(format="%b %d, %Y") }}</time>
 <div>
-  <h2><a href="{{ page.permalink | safe }}">{{ page.title }}</a></h2>
-  <div class="post-time">
-    <time datetime="{{ page.date }}">{{ page.date | date(format="%b %d, %Y") }}</time>
-    {% if page.updated %}
-    (<time datetime="{{ page.updated }}">Updated {{ page.updated | date(format="%b %d, %Y") }}</time>)
-    {% endif %}
-  </div>
-  {{ page.summary | safe }}
-  <a href="{{ page.permalink | safe }}">Read More ⟶</a>
+  <a href="{{ page.permalink | safe }}" class="post-title">{{ page.title }}</a>
+  {% if page.extra.tagline is defined %}
+  <p class="post-tagline">{{ page.extra.tagline }}</p>
+  {% endif %}
 </div>

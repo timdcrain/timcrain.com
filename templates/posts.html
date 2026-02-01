@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+<ul class="posts">
 {% for page in section.pages %}
-  {% include "post_summary.html" %}
+  <li class="post-li">{% include "post_summary.html" %}</li>
 {% endfor %}
+</ul>
 {% endblock content %}

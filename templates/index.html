@@ -5,10 +5,7 @@
 
 <ul class="posts">
 {% for page in section.pages %}
-  <li>
-    <time datetime="{{ page.date }}" class="post-time">{{ page.date | date(format="%b %d, %Y") }}</time>
-    <a href="{{ page.permalink | safe }}" class="post-title">{{ page.title }}</a>
-  </li>
+  <li class="post-li">{% include "post_summary.html" %}</li>
 {% endfor %}
 </ul>
 {% endblock content %}

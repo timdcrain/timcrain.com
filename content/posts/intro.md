@@ -1,11 +1,10 @@
 +++
 title = "Intro"
 date = 2026-01-30T21:44-08:00
+
+[extra]
+tagline = "Do blogs introduce themselves? I guess this one will."
 +++
-
-Do blogs introduce themselves? I guess this one will.
-
-<!-- more -->
 
 I should start by saying that this introduction is more about figuring out what
 this blog should be rather than telling you what it is. I decided to start

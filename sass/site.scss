@@ -32,6 +32,13 @@ $accent2: light-dark(#8e908c, #373b41);
   font-size: smaller;
 }
 
+.post-li {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  padding-top: 0.5em;
+}
+
 .post-time {
   color: $accent2;
   font-size: smaller;
@@ -41,6 +48,11 @@ $accent2: light-dark(#8e908c, #373b41);
 .post-title {
   font-family: "Inter", sans-serif;
   font-weight: bold;
+}
+
+.post-tagline {
+  margin: inherit;
+  padding: inherit;
 }
 
 h1.page-not-found {
