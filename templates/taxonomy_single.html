@@ -5,9 +5,10 @@
 {% endblock title %}
 
 {% block content %}
-<ul class="posts">
+<h3>Posts About <span class="term">{{ term.name }}</span></h3>
+<div class="posts-list">
 {% for page in term.pages %}
-  <li class="post-li">{% include "post_summary.html" %}</li>
+  {% include "post_summary.html" %}
 {% endfor %}
-</ul>
+</div>
 {% endblock content %}

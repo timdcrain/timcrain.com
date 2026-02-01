@@ -4,7 +4,7 @@
 <article>
   <h1>{{ page.title }}</h1>
   {% if page.extra.tagline is defined %}
-  <h4>{{ page.extra.tagline }}</h4>
+  <p>{{ page.extra.tagline }}</p>
   {% endif %}
   <div class="post-time">
     <time datetime="{{ page.date }}">{{ page.date | date(format="%b %d, %Y") }}</time>

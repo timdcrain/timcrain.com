@@ -1,7 +1,7 @@
-<time datetime="{{ page.date }}" class="post-time">{{ page.date | date(format="%b %d, %Y") }}</time>
-<div>
-  <a href="{{ page.permalink | safe }}" class="post-title">{{ page.title }}</a>
+<a href="{{ page.permalink | safe }}" class="summary">
+  <time datetime="{{ page.date }}" class="post-time">{{ page.date | date(format="%b %d, %Y") }}</time>
+  <h3 class="summary-title">{{ page.title }}</h3>
   {% if page.extra.tagline is defined %}
-  <p class="post-tagline">{{ page.extra.tagline }}</p>
+  <p class="summary-tagline">{{ page.extra.tagline }}</p>
   {% endif %}
-</div>
+</a>

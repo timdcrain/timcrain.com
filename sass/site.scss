@@ -1,7 +1,11 @@
 $bg: light-dark(#ffffff, #1d1f21);
 $fg: light-dark(#4d4d4c, #c5c8c6);
 $accent: light-dark(#eab700ff, #f0c674ff);
-$accent2: light-dark(#8e908c, #373b41);
+
+:root {
+  color-scheme: light dark;
+  font-family: "Source Serif 4", serif;
+}
 
 .giallo {
   padding: 1em;
@@ -26,36 +30,43 @@ $accent2: light-dark(#8e908c, #373b41);
 
 .footnotes {
   border-top: thin solid;
-}
-
-.footnotes-list {
   font-size: smaller;
 }
 
-.post-li {
-  display: grid;
-  grid-template-columns: auto auto;
-  justify-content: start;
-  padding-top: 0.5em;
+.posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+.summary {
+  text-decoration: none;
+  line-height: 1.6;
+}
+
+.summary-title {
+  margin: 0;
+  text-decoration: underline;
+  text-underline-offset: 10%;
+  text-decoration-thickness: 10%;
+  text-decoration-color: $accent;
+}
+
+.summary-tagline {
+  // Override color change on a:hover.
+  color: $fg;
+  margin: 0;
 }
 
 .post-time {
-  color: $accent2;
-  font-size: smaller;
-  padding-right: 1em;
-}
-
-.post-title {
+  // Override color change on a:hover.
+  color: $fg;
   font-family: "Inter", sans-serif;
-  font-weight: bold;
+  font-size: smaller;
+  font-weight: lighter;
 }
 
-.post-tagline {
-  margin: inherit;
-  padding: inherit;
-}
-
-h1.page-not-found {
+.page-not-found {
   text-align: center;
 }
 
@@ -63,16 +74,19 @@ h1, h2, h3, h4, h5, h6 {
   font-family: "Inter", sans-serif;
 }
 
-ul.posts {
-  list-style-type: none;
-  padding: 0;
-}
-
-ul.terms {
+.terms {
   font-weight: bold;
 }
 
+.term {
+  text-decoration: underline;
+  text-underline-offset: 10%;
+  text-decoration-thickness: 10%;
+  text-decoration-color: $accent;
+}
+
 a {
+  text-decoration: underline;
   text-underline-offset: 10%;
   text-decoration-thickness: 10%;
   text-decoration-color: $accent;
@@ -84,11 +98,6 @@ a, a:visited, a:active {
 
 a:hover {
   color: $accent;
-}
-
-:root {
-  color-scheme: light dark;
-  font-family: "Source Serif 4", serif;
 }
 
 body {
