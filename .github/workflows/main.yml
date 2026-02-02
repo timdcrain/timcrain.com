@@ -8,10 +8,9 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - name: envsubst
-        env:
-          BASE_URL: ${{ vars.BASE_URL }}
-          ANALYTICS_ID: ${{ vars.ANALYTICS_ID }}
         run: envsubst < config.template.toml > config.toml
+        env:
+          ANALYTICS_ID: ${{ vars.ANALYTICS_ID }}
       - name: build_and_deploy
         uses: shalzz/zola-deploy-action@master
         env:

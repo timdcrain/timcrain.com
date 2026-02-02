@@ -1,4 +1,4 @@
-base_url = "${BASE_URL}"
+base_url = "https://timcrain.com"
 author = "Timothy Crain"
 title = "Tim Crain"
 
