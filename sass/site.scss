@@ -29,8 +29,20 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 }
 
 .footnotes {
-  border-top: thin solid;
   font-size: smaller;
+  padding-top: 1em;
+}
+
+.footnotes-list {
+  list-style-position: inside;
+  padding: 0;
+
+  li {
+    margin: 1em 0;
+    p {
+      display: inline;
+    }
+  }
 }
 
 .posts-list {
