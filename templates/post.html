@@ -2,10 +2,10 @@
 
 {% block content %}
 <article>
-  <header>
-    <h1>{{ page.title }}</h1>
+  <header class="post-header">
+    <h1 class="post-title">{{ page.title }}</h1>
     {% if page.extra.tagline is defined %}
-    <p>{{ page.extra.tagline }}</p>
+    <p class="post-tagline">{{ page.extra.tagline }}</p>
     {% endif %}
     <div class="post-time">
       <time datetime="{{ page.date }}">{{ page.date | date(format="%b %d, %Y") }}</time>

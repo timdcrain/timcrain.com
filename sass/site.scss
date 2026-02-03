@@ -30,7 +30,7 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 
 .footnotes {
   font-size: smaller;
-  padding-top: 1em;
+  padding-top: 0.5em;
 }
 
 .footnotes-list {
@@ -70,6 +70,10 @@ $accent: light-dark(#eab700ff, #f0c674ff);
   margin: 0;
 }
 
+.post-tagline {
+  margin: 0;
+}
+
 .post-time {
   // Override color change on focus.
   color: $fg;
@@ -83,7 +87,7 @@ $accent: light-dark(#eab700ff, #f0c674ff);
   justify-content: space-between;
   font-family: "Inter", sans-serif;
   font-size: smaller;
-  margin: 3em 0;
+  margin: 2em 0;
 
   a {
     display: inline-flex;
@@ -184,12 +188,9 @@ body {
   }
 
   > main {
-    article header {
-      padding: 1em 0;
-    }
-
     p {
       line-height: 1.6;
+      margin: 1.5em 0;
     }
   }
 
