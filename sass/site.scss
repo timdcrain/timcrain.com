@@ -65,13 +65,13 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 }
 
 .summary-tagline {
-  // Override color change on a:hover.
+  // Override color change on focus.
   color: $fg;
   margin: 0;
 }
 
 .post-time {
-  // Override color change on a:hover.
+  // Override color change on focus.
   color: $fg;
   font-family: "Inter", sans-serif;
   font-size: smaller;
@@ -109,6 +109,11 @@ a, a:visited, a:active {
 }
 
 a:hover {
+  color: $accent;
+}
+
+a:focus-visible {
+  outline: none;
   color: $accent;
 }
 
