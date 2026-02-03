@@ -151,12 +151,9 @@ body {
   display: grid;
   grid-template-columns: minmax(auto, 680px);
   justify-content: center;
+  margin: 1.5em;
 
-  > * {
-    padding: 0 2%;
-  }
-
-  header {
+  > header {
     font-family: "Inter", sans-serif;
 
     svg {
@@ -186,7 +183,7 @@ body {
     }
   }
 
-  main {
+  > main {
     article header {
       padding: 1em 0;
     }
@@ -196,7 +193,7 @@ body {
     }
   }
 
-  footer {
+  > footer {
     text-align: center;
     font-size: small;
 
