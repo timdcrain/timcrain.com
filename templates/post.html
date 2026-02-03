@@ -18,6 +18,7 @@
   {{ page.content | safe }}
 </article>
 
+{% if page.higher.permalink is defined or page.lower.permalink is defined %}
 <nav class="post-nav">
   {% if page.higher.permalink is defined %}
   <a href="{{ page.higher.permalink | trim_start_matches(pat=config.base_url) | safe }}" class="post-nav-prev">
@@ -33,4 +34,5 @@
   </a>
   {% endif %}
 </div>
+{% endif %}
 {% endblock content %}
