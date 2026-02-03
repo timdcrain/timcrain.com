@@ -59,8 +59,8 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 .summary-title {
   margin: 0;
   text-decoration: underline;
-  text-underline-offset: 10%;
-  text-decoration-thickness: 10%;
+  text-underline-offset: 0.1em;
+  text-decoration-thickness: 0.1em;
   text-decoration-color: $accent;
 }
 
@@ -78,6 +78,34 @@ $accent: light-dark(#eab700ff, #f0c674ff);
   font-weight: lighter;
 }
 
+.post-nav {
+  display: flex;
+  justify-content: space-between;
+  font-family: "Inter", sans-serif;
+  font-size: smaller;
+  margin: 3em 0;
+
+  a {
+    display: inline-flex;
+    gap: 1em;
+    align-items: center;
+    text-decoration: none;
+    max-width: 45%;
+  }
+
+  .post-nav-title {
+    text-decoration: underline;
+    text-underline-offset: 0.1em;
+    text-decoration-thickness: 0.1em;
+    text-decoration-color: $accent;
+  }
+
+  .post-nav-next {
+    margin-left: auto;
+    text-align: right;
+  }
+}
+
 .page-not-found {
   text-align: center;
 }
@@ -92,15 +120,15 @@ h1, h2, h3, h4, h5, h6 {
 
 .term {
   text-decoration: underline;
-  text-underline-offset: 10%;
-  text-decoration-thickness: 10%;
+  text-underline-offset: 0.1em;
+  text-decoration-thickness: 0.1em;
   text-decoration-color: $accent;
 }
 
 a {
   text-decoration: underline;
-  text-underline-offset: 10%;
-  text-decoration-thickness: 10%;
+  text-underline-offset: 0.1em;
+  text-decoration-thickness: 0.1em;
   text-decoration-color: $accent;
 }
 

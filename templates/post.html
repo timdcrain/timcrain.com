@@ -15,4 +15,20 @@
 
   {{ page.content | safe }}
 </article>
+
+<nav class="post-nav">
+  {% if page.higher.permalink is defined %}
+  <a href="{{ page.higher.permalink | trim_start_matches(pat=config.base_url) | safe }}" class="post-nav-prev">
+    <span class="post-nav-arrow">⟵</span>
+    <span class="post-nav-title">{{ page.higher.title }}</span>
+  </a>
+  {% endif %}
+
+  {% if page.lower.permalink is defined %}
+  <a href="{{ page.lower.permalink | trim_start_matches(pat=config.base_url) | safe }}" class="post-nav-next">
+    <span class="post-nav-title">{{ page.lower.title }}</span>
+    <span class="post-nav-arrow">⟶</span>
+  </a>
+  {% endif %}
+</div>
 {% endblock content %}
