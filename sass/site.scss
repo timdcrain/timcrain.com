@@ -2,14 +2,24 @@ $bg: light-dark(#ffffff, #1d1f21);
 $fg: light-dark(#4d4d4c, #c5c8c6);
 $accent: light-dark(#eab700ff, #f0c674ff);
 
+$font-header: "Instrument Sans", sans-serif;
+$font-content: "Lora", serif;
+$font-code: "Jetbrains Mono", monospace;
+
+@mixin underline {
+  text-decoration: underline;
+  text-underline-offset: 0.1em;
+  text-decoration-thickness: 0.1em;
+  text-decoration-color: $accent;
+}
+
 :root {
   color-scheme: light dark;
-  font-family: "Lora", serif;
 }
 
 .giallo {
   padding: 1em;
-  font-family: "Jetbrains Mono", monospace;
+  font-family: $font-code;
 }
 
 .giallo-l {
@@ -39,6 +49,7 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 
   li {
     margin: 1em 0;
+
     p {
       display: inline;
     }
@@ -57,11 +68,9 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 }
 
 .summary-title {
+  @include underline;
+
   margin: 0;
-  text-decoration: underline;
-  text-underline-offset: 0.1em;
-  text-decoration-thickness: 0.1em;
-  text-decoration-color: $accent;
 }
 
 .summary-tagline {
@@ -77,7 +86,7 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 .post-time {
   // Override color change on focus.
   color: $fg;
-  font-family: "Instrument Sans", sans-serif;
+  font-family: $font-header;
   font-size: smaller;
   font-weight: lighter;
 }
@@ -85,7 +94,7 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 .post-nav {
   display: flex;
   justify-content: space-between;
-  font-family: "Instrument Sans", sans-serif;
+  font-family: $font-header;
   font-size: smaller;
   margin: 2em 0;
 
@@ -98,10 +107,7 @@ $accent: light-dark(#eab700ff, #f0c674ff);
   }
 
   .post-nav-title {
-    text-decoration: underline;
-    text-underline-offset: 0.1em;
-    text-decoration-thickness: 0.1em;
-    text-decoration-color: $accent;
+    @include underline;
   }
 
   .post-nav-next {
@@ -115,7 +121,7 @@ $accent: light-dark(#eab700ff, #f0c674ff);
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: "Instrument Sans", sans-serif;
+  font-family: $font-header;
 }
 
 .terms {
@@ -123,17 +129,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .term {
-  text-decoration: underline;
-  text-underline-offset: 0.1em;
-  text-decoration-thickness: 0.1em;
-  text-decoration-color: $accent;
+  @include underline;
 }
 
 a {
-  text-decoration: underline;
-  text-underline-offset: 0.1em;
-  text-decoration-thickness: 0.1em;
-  text-decoration-color: $accent;
+  @include underline;
 }
 
 a, a:visited, a:active {
@@ -145,8 +145,8 @@ a:hover {
 }
 
 a:focus-visible {
-  outline: none;
   color: $accent;
+  outline: none;
 }
 
 body {
@@ -156,10 +156,9 @@ body {
   grid-template-columns: minmax(auto, 680px);
   justify-content: center;
   margin: 1.5em;
+  font-family: $font-content;
 
   > header {
-    font-family: "Instrument Sans", sans-serif;
-
     svg {
       display: flex;
       width: 1.5em;
