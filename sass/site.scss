@@ -95,7 +95,7 @@ $font-code: "Jetbrains Mono", monospace;
   justify-content: space-between;
   font-family: $font-header;
   font-size: smaller;
-  margin: 2em 0;
+  margin-top: 2em;
 
   a {
     display: inline-flex;
@@ -158,30 +158,8 @@ body {
   font-family: $font-content;
 
   > header {
-    svg {
-      display: flex;
-      width: 1.5em;
-      height: 1.5em;
-    }
-
-    nav {
-      display: grid;
-      grid-template-columns: auto repeat(2, max-content);
-
-      > * {
-        align-self: end;
-        justify-self: end;
-        padding-left: 1em;
-      }
-
-      > *:nth-child(1) {
-        justify-self: start;
-        padding-left: 0;
-      }
-
-      h2, h3 {
-        margin: 0;
-      }
+    h2, h3 {
+      margin: 0;
     }
   }
 
@@ -195,10 +173,16 @@ body {
   > footer {
     text-align: center;
     font-size: small;
+    margin-top: 2em;
 
     img {
       max-width: 1em;
       max-height: 1em;
+    }
+
+    svg {
+      width: 1.5rem;
+      height: 1.5rem;
     }
   }
 }

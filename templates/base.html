@@ -37,14 +37,6 @@
     <nav>
       <h2><a href="{{ get_url(path="@/_index.md") | trim_start_matches(pat=config.base_url) | safe }}">{{ config.title | lower }}</a></h2>
       <!--<h3><a href="{{ get_url(path="@/posts/_index.md") | trim_start_matches(pat=config.base_url) | safe }}">posts</a></h3>-->
-      <a href="/atom.xml" target="_blank">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-          <rect x="10" y="19" width="71" height="71" fill="transparent" />
-          <circle cx="19" cy="81" r="9" fill="currentColor" />
-          <path d="M10,50 A40,40 0 0,1 50,90" stroke="currentColor" stroke-width="12" fill="none" />
-          <path d="M10,25 A65,65 0 0,1 75,90" stroke="currentColor" stroke-width="12" fill="none" />
-        </svg>
-      </a>
     </nav>
   </header>
 
@@ -53,6 +45,14 @@
   </main>
 
   <footer>
+    <a href="/atom.xml" target="_blank">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <rect x="10" y="19" width="71" height="71" fill="transparent" />
+        <circle cx="19" cy="81" r="9" fill="currentColor" />
+        <path d="M10,50 A40,40 0 0,1 50,90" stroke="currentColor" stroke-width="12" fill="none" />
+        <path d="M10,25 A65,65 0 0,1 75,90" stroke="currentColor" stroke-width="12" fill="none" />
+      </svg>
+    </a>
     <p>
       &copy 2026 {{ config.author }}. Content on this site is licensed under
       <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
