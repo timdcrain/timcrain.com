@@ -157,6 +157,10 @@ a:focus-visible {
   outline: none;
 }
 
+hr {
+  color: $accent-dark;
+}
+
 body {
   background-color: $bg;
   color: $fg;
