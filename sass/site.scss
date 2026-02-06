@@ -1,6 +1,7 @@
 $bg: light-dark(#ffffff, #1d1f21);
 $fg: light-dark(#4d4d4c, #c5c8c6);
 $accent: light-dark(#eab700ff, #f0c674ff);
+$accent-dark: light-dark(#e0e0e0, #2d2f31);
 
 $font-header: "Instrument Sans", sans-serif;
 $font-content: "Lora", serif;
@@ -40,18 +41,26 @@ $font-code: "Jetbrains Mono", monospace;
 
 .footnotes {
   font-size: smaller;
+  border-top: 1px solid $accent-dark;
+  padding-top: 2rem;
+  margin-top: 2rem;
 }
 
 .footnotes-list {
   list-style-position: inside;
+  margin: 0;
   padding: 0;
 
   li {
-    margin: 1em 0;
+    margin-bottom: 1em;
+  }
 
-    p {
-      display: inline;
-    }
+  li:last-child {
+    margin-bottom: 0;
+  }
+
+  p {
+    display: inline;
   }
 }
 
@@ -95,7 +104,7 @@ $font-code: "Jetbrains Mono", monospace;
   justify-content: space-between;
   font-family: $font-header;
   font-size: smaller;
-  margin-top: 2em;
+  margin-top: 2rem;
 
   a {
     display: inline-flex;
@@ -173,7 +182,7 @@ body {
   > footer {
     text-align: center;
     font-size: small;
-    margin-top: 2em;
+    margin-top: 2rem;
 
     img {
       max-width: 1em;
