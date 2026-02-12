@@ -39,6 +39,10 @@ $font-code: "Jetbrains Mono", monospace;
     opacity: 0.8;
 }
 
+.footnote-reference {
+  margin-right: 0.5ch;
+}
+
 .footnotes {
   font-size: smaller;
   border-top: 1px solid $accent-dark;
