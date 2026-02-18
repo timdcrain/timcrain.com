@@ -2,6 +2,7 @@ $bg: light-dark(#fafafa, #141617);
 $fg: light-dark(#4d4d4c, #c5c8c6);
 $accent: light-dark(#eab700ff, #f0c674ff);
 $accent-dark: light-dark(#e0e0e0, #2d2f31);
+$bg-code: light-dark(#ffffff, #1d1f21);
 
 $font-header: "Instrument Sans", sans-serif;
 $font-content: "Lora", serif;
@@ -24,19 +25,25 @@ $font-code: "Jetbrains Mono", monospace;
 }
 
 .giallo-l {
-    display: inline-block;
-    min-height: 1lh;
-    width: 100%;
+  display: inline-block;
+  min-height: 1lh;
+  width: 100%;
 }
 
 .giallo-ln {
-    display: inline-block;
-    user-select: none;
-    margin-right: 0.4em;
-    padding: 0.4em;
-    min-width: 3ch;
-    text-align: right;
-    opacity: 0.8;
+  display: inline-block;
+  user-select: none;
+  margin-right: 0.4em;
+  padding: 0.4em;
+  min-width: 3ch;
+  text-align: right;
+  opacity: 0.8;
+}
+
+p > code {
+  padding: 0.5ch;
+  white-space: nowrap;
+  background-color: $bg-code;
 }
 
 .footnote-reference {
