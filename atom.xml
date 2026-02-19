@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Tim Crain</title>
+    <link rel="self" type="application/atom+xml" href="https://timcrain.com/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://timcrain.com"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2026-02-17T22:32:00-08:00</updated>
+    <id>https://timcrain.com/atom.xml</id>
+    <entry xml:lang="en">
+        <title>impl Trait</title>
+        <published>2026-02-17T22:32:00-08:00</published>
+        <updated>2026-02-17T22:32:00-08:00</updated>
+        
+        <author>
+          <name>
+            
+              Timothy Crain
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://timcrain.com/posts/rust-impl-trait/"/>
+        <id>https://timcrain.com/posts/rust-impl-trait/</id>
+        
+        <content type="html" xml:base="https://timcrain.com/posts/rust-impl-trait/">&lt;p&gt;I’m a little embarrassed that I’ve been writing Rust for the last four years and
+just now realized that &lt;code&gt;fn foo(arg: impl Trait)&lt;&#x2F;code&gt; is &lt;em&gt;not&lt;&#x2F;em&gt; a function accepting a
+trait object but is in fact exactly the same as &lt;code&gt;fn foo&amp;lt;T: Trait&amp;gt;(arg: T)&lt;&#x2F;code&gt;.
+&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-dyn-trait-1&quot;&gt;&lt;a href=&quot;#fn-dyn-trait&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; It must have been a recent change, right? Oh,
+&lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;blog.rust-lang.org&#x2F;2018&#x2F;05&#x2F;10&#x2F;Rust-1.26&#x2F;#impl-trait&quot;&gt;2018&lt;&#x2F;a&gt;. Anyways,
+why was this syntax added? I don’t think that this syntax is enough of an
+improvement &lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-syntax-1&quot;&gt;&lt;a href=&quot;#fn-syntax&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; to add the complexity of a second way of doing things.&lt;&#x2F;p&gt;
+&lt;p&gt;It turns out that there were a lot of reasons, &lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-rfc-1&quot;&gt;&lt;a href=&quot;#fn-rfc&quot;&gt;3&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; but one of the main
+reasons is symmetry with &lt;code&gt;impl Trait&lt;&#x2F;code&gt; in the return position, i.e. &lt;code&gt;fn foo() -&amp;gt; impl Trait&lt;&#x2F;code&gt;. This is more interesting because it is not equivalent to &lt;code&gt;fn foo&amp;lt;T: Trait&amp;gt;() -&amp;gt; T&lt;&#x2F;code&gt;. In fact, it is the complete opposite: a function returning an
+&lt;code&gt;impl Trait&lt;&#x2F;code&gt; can only return a single concrete type.&lt;&#x2F;p&gt;
+&lt;p&gt;In type theory this is an &lt;strong&gt;existential&lt;&#x2F;strong&gt; type, where the caller only knows that
+a type &lt;em&gt;exists&lt;&#x2F;em&gt; that satisfies the given abstract type. &lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-existential-1&quot;&gt;&lt;a href=&quot;#fn-existential&quot;&gt;4&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; In Rust,
+this allows the compiler to use the returned type as if it was a concrete type
+(e.g. static dispatch, no boxing) while hiding that from the caller. The &lt;code&gt;impl Trait&lt;&#x2F;code&gt; in the argument position is a &lt;strong&gt;universal&lt;&#x2F;strong&gt; type, where the callee must
+accept &lt;em&gt;all&lt;&#x2F;em&gt; types that satisfy the abstract type.&lt;&#x2F;p&gt;
+&lt;p&gt;Are there any real-world uses for &lt;code&gt;impl Trait&lt;&#x2F;code&gt; as a return type? There is one
+very prominent (but not obvious) example—async functions actually return an
+&lt;code&gt;impl Future&amp;lt;Output=T&amp;gt;&lt;&#x2F;code&gt;. Because futures have unique, un-writable types, they
+can only be returned either as &lt;code&gt;impl Future&amp;lt;Output=T&amp;gt;&lt;&#x2F;code&gt; or as &lt;code&gt;Box&amp;lt;dyn Future&amp;lt;Output=T&amp;gt;&amp;gt;&lt;&#x2F;code&gt;, and so the &lt;code&gt;impl Trait&lt;&#x2F;code&gt; feature allows Rust to have
+stack-allocated futures.&lt;&#x2F;p&gt;
+&lt;p&gt;Anyways, I doubt I will be writing functions that return an &lt;code&gt;impl Trait&lt;&#x2F;code&gt; very
+often, but it’s a really neat example of how Rust enables zero-cost
+abstractions.&lt;&#x2F;p&gt;
+&lt;section class=&quot;footnotes&quot;&gt;
+&lt;ol class=&quot;footnotes-list&quot;&gt;
+&lt;li id=&quot;fn-dyn-trait&quot;&gt;
+&lt;p&gt;I blame the similarity to &lt;code&gt;dyn Trait&lt;&#x2F;code&gt;. &lt;code&gt;fn foo&amp;lt;T: Trait&amp;gt;(arg: T)&lt;&#x2F;code&gt;
+is so obviously generic while &lt;code&gt;fn foo(arg: impl Trait)&lt;&#x2F;code&gt; (generic) looks very
+similar to &lt;code&gt;fn foo(arg: Box&amp;lt;dyn Trait&amp;gt;)&lt;&#x2F;code&gt; (not generic). I think I just saw
+&lt;code&gt;Trait&lt;&#x2F;code&gt; in the argument position and assumed it was the latter. &lt;a href=&quot;#fr-dyn-trait-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-syntax&quot;&gt;
+&lt;p&gt;Actually, I much prefer the more verbose syntax. It feels much more
+intentional. &lt;a href=&quot;#fr-syntax-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-rfc&quot;&gt;
+&lt;p&gt;See &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;rust-lang.github.io&#x2F;rfcs&#x2F;1951-expand-impl-trait.html&quot;&gt;RFC 1951&lt;&#x2F;a&gt;
+for a more in-depth discussion. &lt;a href=&quot;#fr-rfc-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-existential&quot;&gt;
+&lt;p&gt;In Rust, a function that returns an existential type can only
+return a single concrete type, but that is not a general fact about
+existential types. &lt;a href=&quot;#fr-existential-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;section&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Intro</title>
+        <published>2026-01-30T21:44:00-08:00</published>
+        <updated>2026-01-30T21:44:00-08:00</updated>
+        
+        <author>
+          <name>
+            
+              Timothy Crain
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://timcrain.com/posts/intro/"/>
+        <id>https://timcrain.com/posts/intro/</id>
+        
+        <content type="html" xml:base="https://timcrain.com/posts/intro/">&lt;p&gt;I should start by saying that this introduction is more about figuring out what
+this blog should be rather than telling you what it is. I decided to start
+writing this blog because I wanted to improve my writing and force myself to
+talk about things. &lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-fns-1&quot;&gt;&lt;a href=&quot;#fn-fns&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; I imagine that most people start a blog because they
+have something to say, but that doesn’t come easily for me.&lt;&#x2F;p&gt;
+&lt;p&gt;So, with that out of the way, welcome to my blog. The focus will mostly be on
+topics related to my job as a software engineer, e.g. Rust, distributed systems,
+networking, and interesting problems that I’ve solved. But I’ll also write about
+some of my other interests as well, like skiing or books I’m reading.&lt;&#x2F;p&gt;
+&lt;p&gt;One thing I don’t plan on writing much about is AI—I don’t think I have much
+to say on this subject that isn’t already being said everywhere on the Internet.
+But at the same time I doubt I can completely avoid it either.&lt;&#x2F;p&gt;
+&lt;p&gt;On that topic, I guess I should say something about my use of AI and this blog.
+Everything on this site will be written by me, &lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-emdash-1&quot;&gt;&lt;a href=&quot;#fn-emdash&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; but I may use LLMs to
+review my posts or for brainstorming ideas for posts. I’m not a huge AI fan, but
+I do think they can be useful tools. &lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-ai-1&quot;&gt;&lt;a href=&quot;#fn-ai&quot;&gt;3&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;&lt;&#x2F;p&gt;
+&lt;section class=&quot;footnotes&quot;&gt;
+&lt;ol class=&quot;footnotes-list&quot;&gt;
+&lt;li id=&quot;fn-fns&quot;&gt;
+&lt;p&gt;And also so that I can write footnotes. If I’m being honest that’s
+probably the real reason. &lt;a href=&quot;#fr-fns-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-emdash&quot;&gt;
+&lt;p&gt;Yes, even the em dash in the previous paragraph. &lt;a href=&quot;#fr-emdash-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-ai&quot;&gt;
+&lt;p&gt;That will probably eventually take my job. So. &lt;a href=&quot;#fr-ai-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;section&gt;
+</content>
+        
+    </entry>
+</feed>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  
+  <!-- Analytics -->
+  <script async defer data-website-id="9004d703-0662-4c7c-8d5b-104cc59b1462" src="https://umami-proxy.timcrain.workers.dev/script.js"></script>
+  
+
+  <!-- Handle mobile devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+    
+      impl Trait -
+    
+    tim crain
+    
+  </title>
+
+  <link rel="canonical" href="https://timcrain.com/posts/rust-impl-trait/">
+
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+  <link rel="stylesheet" type="text/css" href="/site.css">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <header>
+    <nav>
+      <h2><a href="/">tim crain</a></h2>
+      <!--<h3><a href="/posts/">posts</a></h3>-->
+    </nav>
+  </header>
+
+  <main>
+    
+<article>
+  <header class="post-header">
+    <h1 class="post-title">impl Trait</h1>
+    
+    <p class="post-tagline">Existential types in Rust</p>
+    
+    <div class="post-time">
+      <time datetime="2026-02-17T22:32:00-08:00">Feb 17, 2026</time>
+      
+    </div>
+  </header>
+
+  <p>I’m a little embarrassed that I’ve been writing Rust for the last four years and
+just now realized that <code>fn foo(arg: impl Trait)</code> is <em>not</em> a function accepting a
+trait object but is in fact exactly the same as <code>fn foo&lt;T: Trait&gt;(arg: T)</code>.
+<sup class="footnote-reference" id="fr-dyn-trait-1"><a href="#fn-dyn-trait">1</a></sup> It must have been a recent change, right? Oh,
+<a rel="noopener external" target="_blank" href="https://blog.rust-lang.org/2018/05/10/Rust-1.26/#impl-trait">2018</a>. Anyways,
+why was this syntax added? I don’t think that this syntax is enough of an
+improvement <sup class="footnote-reference" id="fr-syntax-1"><a href="#fn-syntax">2</a></sup> to add the complexity of a second way of doing things.</p>
+<p>It turns out that there were a lot of reasons, <sup class="footnote-reference" id="fr-rfc-1"><a href="#fn-rfc">3</a></sup> but one of the main
+reasons is symmetry with <code>impl Trait</code> in the return position, i.e. <code>fn foo() -&gt; impl Trait</code>. This is more interesting because it is not equivalent to <code>fn foo&lt;T: Trait&gt;() -&gt; T</code>. In fact, it is the complete opposite: a function returning an
+<code>impl Trait</code> can only return a single concrete type.</p>
+<p>In type theory this is an <strong>existential</strong> type, where the caller only knows that
+a type <em>exists</em> that satisfies the given abstract type. <sup class="footnote-reference" id="fr-existential-1"><a href="#fn-existential">4</a></sup> In Rust,
+this allows the compiler to use the returned type as if it was a concrete type
+(e.g. static dispatch, no boxing) while hiding that from the caller. The <code>impl Trait</code> in the argument position is a <strong>universal</strong> type, where the callee must
+accept <em>all</em> types that satisfy the abstract type.</p>
+<p>Are there any real-world uses for <code>impl Trait</code> as a return type? There is one
+very prominent (but not obvious) example—async functions actually return an
+<code>impl Future&lt;Output=T&gt;</code>. Because futures have unique, un-writable types, they
+can only be returned either as <code>impl Future&lt;Output=T&gt;</code> or as <code>Box&lt;dyn Future&lt;Output=T&gt;&gt;</code>, and so the <code>impl Trait</code> feature allows Rust to have
+stack-allocated futures.</p>
+<p>Anyways, I doubt I will be writing functions that return an <code>impl Trait</code> very
+often, but it’s a really neat example of how Rust enables zero-cost
+abstractions.</p>
+<section class="footnotes">
+<ol class="footnotes-list">
+<li id="fn-dyn-trait">
+<p>I blame the similarity to <code>dyn Trait</code>. <code>fn foo&lt;T: Trait&gt;(arg: T)</code>
+is so obviously generic while <code>fn foo(arg: impl Trait)</code> (generic) looks very
+similar to <code>fn foo(arg: Box&lt;dyn Trait&gt;)</code> (not generic). I think I just saw
+<code>Trait</code> in the argument position and assumed it was the latter. <a href="#fr-dyn-trait-1">↩</a></p>
+</li>
+<li id="fn-syntax">
+<p>Actually, I much prefer the more verbose syntax. It feels much more
+intentional. <a href="#fr-syntax-1">↩</a></p>
+</li>
+<li id="fn-rfc">
+<p>See <a rel="noopener external" target="_blank" href="https://rust-lang.github.io/rfcs/1951-expand-impl-trait.html">RFC 1951</a>
+for a more in-depth discussion. <a href="#fr-rfc-1">↩</a></p>
+</li>
+<li id="fn-existential">
+<p>In Rust, a function that returns an existential type can only
+return a single concrete type, but that is not a general fact about
+existential types. <a href="#fr-existential-1">↩</a></p>
+</li>
+</ol>
+</section>
+
+</article>
+
+
+<nav class="post-nav">
+  
+  <a href="/posts/intro/" class="post-nav-prev">
+    <span class="post-nav-arrow">⟵</span>
+    <span class="post-nav-title">Intro</span>
+  </a>
+  
+
+  
+</nav>
+
+
+  </main>
+
+  <footer>
+    <a href="/atom.xml" target="_blank">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <rect x="10" y="19" width="71" height="71" fill="transparent" />
+        <circle cx="19" cy="81" r="9" fill="currentColor" />
+        <path d="M10,50 A40,40 0 0,1 50,90" stroke="currentColor" stroke-width="12" fill="none" />
+        <path d="M10,25 A65,65 0 0,1 75,90" stroke="currentColor" stroke-width="12" fill="none" />
+      </svg>
+    </a>
+    <p>
+      &copy 2026 Timothy Crain. Content on this site is licensed under
+      <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
+      <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="">
+      <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="">
+    </p>
+  </footer>
+</body>
+
+</html>

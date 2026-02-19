@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://timcrain.com/</loc>
+    </url>
+    <url>
+        <loc>https://timcrain.com/posts/</loc>
+    </url>
+    <url>
+        <loc>https://timcrain.com/posts/intro/</loc>
+        <lastmod>2026-01-30T21:44:00-08:00</lastmod>
+    </url>
+    <url>
+        <loc>https://timcrain.com/posts/rust-impl-trait/</loc>
+        <lastmod>2026-02-17T22:32:00-08:00</lastmod>
+    </url>
+    <url>
+        <loc>https://timcrain.com/tags/</loc>
+    </url>
+    <url>
+        <loc>https://timcrain.com/tags/rust/</loc>
+    </url>
+</urlset>
