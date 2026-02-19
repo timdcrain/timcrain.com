@@ -23,6 +23,10 @@
     {% endblock title %}
   </title>
 
+  {% if current_url is defined -%}
+  <link rel="canonical" href="{{ current_url | safe }}">
+  {%- endif %}
+
   <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
   <link rel="stylesheet" type="text/css" href="{{ get_url(path="site.css", cachebust=config.mode == "serve") | trim_start_matches(pat=config.base_url) | safe }}">
 
