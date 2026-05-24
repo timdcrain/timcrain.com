@@ -6,7 +6,7 @@ compile_sass = true
 generate_feeds = true
 
 taxonomies = [
- { name = "tags" },
+    { name = "tags" },
 ]
 
 [markdown]
@@ -23,7 +23,3 @@ extra_themes = [
     "highlight_themes/base16-tomorrow-night.json",
     "highlight_themes/base16-tomorrow.json",
 ]
-
-[extra.analytics]
-id = "${ANALYTICS_ID}"
-url = "https://umami-proxy.timcrain.workers.dev/script.js"
