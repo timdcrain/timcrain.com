@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 
+{% block head %}
+  {% for asset in page.assets %}
+  {%- if asset is ending_with(".js") %}
+  <script defer type="module" src="{{ asset | safe }}"></script>
+  {%- endif %}
+  {%- endfor -%}
+{% endblock head %}
+
 {% block content %}
 <article>
   <header class="post-header">
