@@ -107,6 +107,8 @@ p > code {
   font-family: $font-header;
   font-size: smaller;
   opacity: 0.5;
+  display: flex;
+  gap: 1em;
 }
 
 .post-nav {
