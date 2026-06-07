@@ -22,12 +22,12 @@ $font-code: "Jetbrains Mono", monospace;
 .giallo {
   padding: 1em;
   font-family: $font-code;
+  overflow-x: auto;
 }
 
 .giallo-l {
   display: inline-block;
   min-height: 1lh;
-  width: 100%;
 }
 
 .giallo-ln {
@@ -189,6 +189,8 @@ body {
   }
 
   > main {
+    min-width: 0;
+
     p {
       line-height: 1.6;
       margin: 1.5em 0;
