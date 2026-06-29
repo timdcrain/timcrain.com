@@ -17,8 +17,8 @@ topics related to my job as a software engineer, e.g. Rust, distributed systems,
 networking, and interesting problems that I've solved. But I'll also write about
 some of my other interests as well, like skiing or books I'm reading.
 
-One thing I don't plan on writing much about is AI---I don't think I have much
-to say on this subject that isn't already being said everywhere on the Internet.
+One thing I don't plan on writing much about is AI—I don't think I have much to
+say on this subject that isn't already being said everywhere on the Internet.
 But at the same time I doubt I can completely avoid it either.
 
 On that topic, I guess I should say something about my use of AI and this blog.
@@ -28,7 +28,5 @@ I do think they can be useful tools. [^ai]
 
 [^fns]: And also so that I can write footnotes. If I'm being honest that's
     probably the real reason.
-
 [^emdash]: Yes, even the em dash in the previous paragraph.
-
 [^ai]: That will probably eventually take my job. So.
