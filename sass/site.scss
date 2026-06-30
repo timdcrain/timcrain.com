@@ -20,9 +20,10 @@ $font-code: "Jetbrains Mono", monospace;
 }
 
 .giallo {
-  padding: 1em;
+  border-radius: 4px;
   font-family: $font-code;
   overflow-x: auto;
+  padding: 1em;
 }
 
 .giallo-l {
@@ -41,9 +42,10 @@ $font-code: "Jetbrains Mono", monospace;
 }
 
 p > code {
+  background-color: $bg-code;
+  border-radius: 4px;
   padding: 0.5ch;
   white-space: nowrap;
-  background-color: $bg-code;
 }
 
 .footnote-reference {
