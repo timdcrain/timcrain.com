@@ -41,7 +41,7 @@ $font-code: "Jetbrains Mono", monospace;
   opacity: 0.8;
 }
 
-p > code {
+code:not(pre code) {
   background-color: $bg-code;
   border-radius: 4px;
   padding: 0.5ch;
