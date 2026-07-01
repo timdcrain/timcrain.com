@@ -50,6 +50,10 @@ code:not(pre code) {
 
 .footnote-reference {
   margin-right: 0.5ch;
+
+  a {
+    font-size: smaller;
+  }
 }
 
 .footnotes {
