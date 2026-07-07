@@ -21,8 +21,9 @@
       (<time datetime="{{ page.updated }}">Updated {{ page.updated | date(format="%b %-d, %Y") }}</time>)
       {% endif %}
       {% if page.reading_time %}
+      ⏱
       <time datetime="PT{{ page.reading_time }}M">
-        ⏱ {{ page.reading_time }} min{% if page.reading_time > 1 %}s{% endif %}
+        {{ page.reading_time }} min{% if page.reading_time > 1 %}s{% endif %}
       </time>
       {% endif %}
     </div>
