@@ -16,9 +16,9 @@
     <p class="post-tagline">{{ page.extra.tagline }}</p>
     {% endif %}
     <div class="post-time">
-      <time datetime="{{ page.date }}">{{ page.date | date(format="%b %d, %Y") }}</time>
+      <time datetime="{{ page.date }}">{{ page.date | date(format="%b %-d, %Y") }}</time>
       {% if page.updated %}
-      (<time datetime="{{ page.updated }}">Updated {{ page.updated | date(format="%b %d, %Y") }}</time>)
+      (<time datetime="{{ page.updated }}">Updated {{ page.updated | date(format="%b %-d, %Y") }}</time>)
       {% endif %}
       {% if page.reading_time %}
       <time datetime="PT{{ page.reading_time }}M">
