@@ -9,7 +9,7 @@ tagline = "Do blogs introduce themselves? I guess this one will."
 I should start by saying that this introduction is more about figuring out what
 this blog should be rather than telling you what it is. I decided to start
 writing this blog because I wanted to improve my writing and force myself to
-talk about things. [^fns] I imagine that most people start a blog because they
+talk about things.[^fns] I imagine that most people start a blog because they
 have something to say, but that doesn't come easily for me.
 
 So, with that out of the way, welcome to my blog. The focus will mostly be on
@@ -22,9 +22,9 @@ say on this subject that isn't already being said everywhere on the Internet.
 But at the same time I doubt I can completely avoid it either.
 
 On that topic, I guess I should say something about my use of AI and this blog.
-Everything on this site will be written by me, [^emdash] but I may use LLMs to
+Everything on this site will be written by me,[^emdash] but I may use LLMs to
 review my posts or for brainstorming ideas for posts. I'm not a huge AI fan, but
-I do think they can be useful tools. [^ai]
+I do think they can be useful tools.[^ai]
 
 [^fns]: And also so that I can write footnotes. If I'm being honest that's
     probably the real reason.

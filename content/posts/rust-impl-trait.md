@@ -11,19 +11,19 @@ tagline = "Existential types in Rust."
 
 I'm a little embarrassed that I've been writing Rust for the last four years and
 just now realized that `fn foo(arg: impl Trait)` is _not_ a function accepting a
-trait object but is in fact exactly the same as `fn foo<T: Trait>(arg: T)`.
-[^dyn-trait] It must have been a recent change, right? Oh, [2018][]. Anyways,
-why was this syntax added? I don't think that this syntax is enough of an
-improvement [^syntax] to add the complexity of a second way of doing things.
+trait object but is in fact exactly the same as `fn foo<T: Trait>(arg:
+T)`.[^dyn-trait] It must have been a recent change, right? Oh, [2018][].
+Anyways, why was this syntax added? I don't think that this syntax is enough of
+an improvement[^syntax] to add the complexity of a second way of doing things.
 
-It turns out that there were a lot of reasons, [^rfc] but one of the main
-reasons is symmetry with `impl Trait` in the return position, i.e. `fn foo() ->
-impl Trait`. This is more interesting because it is not equivalent to `fn foo<T:
+It turns out that there were a lot of reasons,[^rfc] but one of the main reasons
+is symmetry with `impl Trait` in the return position, i.e. `fn foo() -> impl
+Trait`. This is more interesting because it is not equivalent to `fn foo<T:
 Trait>() -> T`. In fact, it is the complete opposite: a function returning an
 `impl Trait` can only return a single concrete type.
 
 In type theory this is an **existential** type, where the caller only knows that
-a type _exists_ that satisfies the given abstract type. [^existential] In Rust,
+a type _exists_ that satisfies the given abstract type.[^existential] In Rust,
 this allows the compiler to use the returned type as if it was a concrete type
 (e.g. static dispatch, no boxing) while hiding that from the caller. The `impl
 Trait` in the argument position is a **universal** type, where the callee must
