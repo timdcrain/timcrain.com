@@ -3,7 +3,7 @@ title = "eBPF socket redirection"
 date = 2026-07-12T21:43-07:00
 
 [taxonomies]
-tags = ["ebpf"]
+tags = ["ebpf", "networking"]
 
 [extra]
 tagline = "Moving data between sockets . . . but with eBPF."
