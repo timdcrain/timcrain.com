@@ -15,18 +15,7 @@
     {% if page.extra.tagline is defined %}
     <p class="post-tagline">{{ page.extra.tagline }}</p>
     {% endif %}
-    <div class="post-time">
-      <time datetime="{{ page.date }}">{{ page.date | date(format="%b %-d, %Y") }}</time>
-      {% if page.updated %}
-      (<time datetime="{{ page.updated }}">Updated {{ page.updated | date(format="%b %-d, %Y") }}</time>)
-      {% endif %}
-      {% if page.reading_time %}
-      ⏱
-      <time datetime="PT{{ page.reading_time }}M">
-        {{ page.reading_time }} min{% if page.reading_time > 1 %}s{% endif %}
-      </time>
-      {% endif %}
-    </div>
+    {% include "post_time.html" %}
   </header>
 
   {{ page.content | safe }}

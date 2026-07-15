@@ -108,13 +108,18 @@ code:not(pre code) {
 }
 
 .post-time {
-  // Override color change on focus.
-  color: $fg;
+  align-items: center;
+  color: $fg; // Override color change on focus.
+  display: flex;
   font-family: $font-header;
   font-size: smaller;
-  opacity: 0.5;
-  display: flex;
   gap: 0.5em;
+  opacity: 0.5;
+
+  svg {
+    width: 1em;
+    height: 1em;
+  }
 }
 
 .post-nav {
