@@ -4,4 +4,11 @@
   {% if page.extra.tagline is defined %}
   <p class="summary-tagline">{{ page.extra.tagline }}</p>
   {% endif %}
+  {% if page.taxonomies.tags is defined %}
+  <ul class="tags">
+  {% for tag in page.taxonomies.tags %}
+    <li>{{ tag }}</li>
+  {% endfor %}
+  </ul>
+  {% endif %}
 </a>
