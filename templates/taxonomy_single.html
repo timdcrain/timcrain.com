@@ -5,7 +5,7 @@
 {% endblock title %}
 
 {% block content %}
-<h3>Posts About <span class="term">{{ term.name }}</span></h3>
+<h3>Posts about <span class="term">{{ term.name }}</span></h3>
 <div class="posts-list">
 {% for page in term.pages %}
   {% include "post_summary.html" %}
