@@ -1,14 +1,16 @@
 <a href="{{ page.permalink | trim_start_matches(pat=config.base_url) | safe }}" class="summary">
-  {% include "post_time.html" %}
+  <div class="post-meta">
+    {% include "post_time.html" %}
+    {% if page.taxonomies.tags is defined %}
+    <ul class="tags">
+    {% for tag in page.taxonomies.tags %}
+      <li>{{ tag }}</li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
   <h3 class="summary-title">{{ page.title }}</h3>
   {% if page.extra.tagline is defined %}
   <p class="summary-tagline">{{ page.extra.tagline }}</p>
-  {% endif %}
-  {% if page.taxonomies.tags is defined %}
-  <ul class="tags">
-  {% for tag in page.taxonomies.tags %}
-    <li>{{ tag }}</li>
-  {% endfor %}
-  </ul>
   {% endif %}
 </a>

@@ -99,19 +99,15 @@ code:not(pre code) {
 }
 
 .tags {
-  color: $fg; // Override color change on focus.
-  display: inline-flex;
-  font-family: $font-header;
-  font-size: smaller;
-  gap: 0.5em;
+  display: flex;
+  gap: 0.3em;
   list-style: none;
   margin: 0;
-  opacity: 0.5;
   padding: 0;
 
   li:not(:first-child)::before {
-    content: "•";
-    margin-right: 0.5em;
+    content: "/";
+    margin-right: 0.3em;
   }
 
   a {
@@ -127,20 +123,13 @@ code:not(pre code) {
   margin: 0.5em 0;
 }
 
-.post-time {
-  align-items: center;
+.post-meta {
   color: $fg; // Override color change on focus.
-  display: inline-flex;
+  display: flex;
   font-family: $font-header;
   font-size: smaller;
-  gap: 0.5em;
-  margin-right: 1em;
+  gap: 1em;
   opacity: 0.5;
-
-  svg {
-    width: 1em;
-    height: 1em;
-  }
 }
 
 .post-nav {

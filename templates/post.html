@@ -15,15 +15,17 @@
     {% if page.extra.tagline is defined %}
     <p class="post-tagline">{{ page.extra.tagline }}</p>
     {% endif %}
-    {% include "post_time.html" %}
-    {% if page.taxonomies.tags is defined %}
-    <ul class="tags">
-    {% for tag in page.taxonomies.tags %}
-    {% set term = get_taxonomy_term(kind="tags", term=tag) %}
-    <li><a href="{{ term.permalink | trim_start_matches(pat=config.base_url) }}">{{ tag }}</a></li>
-    {% endfor %}
-    </ul>
-    {% endif %}
+    <div class="post-meta">
+      {% include "post_time.html" %}
+      {% if page.taxonomies.tags is defined %}
+      <ul class="tags">
+      {% for tag in page.taxonomies.tags %}
+      {% set term = get_taxonomy_term(kind="tags", term=tag) %}
+      <li><a href="{{ term.permalink | trim_start_matches(pat=config.base_url) }}">{{ tag }}</a></li>
+      {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
   </header>
 
   {{ page.content | safe }}

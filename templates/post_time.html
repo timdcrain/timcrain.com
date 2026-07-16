@@ -1,12 +1,6 @@
-<div class="post-time">
-  <time datetime="{{ page.date }}">{{ page.date | date(format="%b %-d, %Y") }}</time>
-  {% if page.reading_time %}
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="12" r="10"></circle>
-    <polyline points="12 6 12 12 16 14"></polyline>
-  </svg>
-  <time datetime="PT{{ page.reading_time }}M">
-    {{ page.reading_time }} min{% if page.reading_time > 1 %}s{% endif %}
-  </time>
-  {% endif %}
-</div>
+<time datetime="{{ page.date }}">{{ page.date | date(format="%b %-d, %Y") }}</time>
+{% if page.reading_time %}
+<time datetime="PT{{ page.reading_time }}M">
+  {{ page.reading_time }} min{% if page.reading_time > 1 %}s{% endif %}
+</time>
+{% endif %}
