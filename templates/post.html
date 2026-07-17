@@ -28,7 +28,7 @@
     </div>
   </header>
 
-  {{ page.content | safe }}
+  {{ page.content | replace(from=config.base_url, to="") | safe }}
 </article>
 
 {% if page.higher.permalink is defined or page.lower.permalink is defined %}
