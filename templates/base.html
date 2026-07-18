@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 
+{%- if page -%}
+{%- set this = page -%}
+{%- elif section -%}
+{%- set this = section -%}
+{%- endif -%}
+
 <head>
   <meta charset="utf-8">
 
@@ -12,17 +18,17 @@
   <!-- Handle mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>
+  {%- set title = "" -%}
   {%- block title -%}
-    {%- if page.title -%}
-      {{ page.title }} · {{ config.title | lower }}
-    {%- elif section.title -%}
-      {{ section.title }} · {{ config.title | lower }}
-    {%- else -%}
-      {{ config.title | lower }}
-    {%- endif -%}
+  {%- if this and this.title -%}
+    {%- set title = this.title -%}
+  {%- endif -%}
   {%- endblock title -%}
-  </title>
+
+  {%- if title %}
+    {% set title = title ~ " · " %}
+  {% endif -%}
+  <title>{{ title ~ config.title }}</title>
 
   {% if current_url is defined -%}
   <link rel="canonical" href="{{ current_url | safe }}">
@@ -40,7 +46,7 @@
 <body>
   <header>
     <nav>
-      <h2><a href="{{ get_url(path="@/_index.md") | trim_start_matches(pat=config.base_url) | safe }}">{{ config.title | lower }}</a></h2>
+      <h2><a href="{{ get_url(path="@/_index.md") | trim_start_matches(pat=config.base_url) | safe }}">{{ config.title }}</a></h2>
       <!--<h3><a href="{{ get_url(path="@/posts/_index.md") | trim_start_matches(pat=config.base_url) | safe }}">posts</a></h3>-->
     </nav>
   </header>
