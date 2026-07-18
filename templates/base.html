@@ -4,29 +4,29 @@
 <head>
   <meta charset="utf-8">
 
-  {% if config.extra.analytics is defined %}
+  {%- if config.extra.analytics is defined -%}
   <!-- Analytics -->
   <script async defer data-website-id="{{ config.extra.analytics.id }}" src="{{ config.extra.analytics.url | safe }}"></script>
-  {% endif %}
+  {%- endif %}
 
   <!-- Handle mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>
-    {% block title %}
-    {% if page.title %}
-      {{ page.title }} ·
-    {% elif section.title %}
-      {{ section.title }} ·
-    {% endif %}
-    {{ config.title | lower }}
-    {% endblock title %}
+  {%- block title -%}
+    {%- if page.title -%}
+      {{ page.title }} · {{ config.title | lower }}
+    {%- elif section.title -%}
+      {{ section.title }} · {{ config.title | lower }}
+    {%- else -%}
+      {{ config.title | lower }}
+    {%- endif -%}
+  {%- endblock title -%}
   </title>
 
   {% if current_url is defined -%}
   <link rel="canonical" href="{{ current_url | safe }}">
   {%- endif %}
-
   <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
   <link rel="stylesheet" type="text/css" href="{{ get_url(path="site.css", cachebust=config.mode == "serve") | trim_start_matches(pat=config.base_url) | safe }}">
 
