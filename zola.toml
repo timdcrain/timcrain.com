@@ -1,6 +1,7 @@
 base_url = "https://timcrain.com"
-author = "Timothy Crain"
 title = "tim crain"
+description = "Writing about software engineering"
+author = "Timothy Crain"
 
 compile_sass = true
 generate_feeds = true

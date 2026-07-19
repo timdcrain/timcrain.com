@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 
-{%- block title -%}
-{% set title = taxonomy.name %}
-{%- endblock title -%}
+{% block meta -%}
+{%- set title = taxonomy.name -%}
+{%- set description = "Post " ~ taxonomy.name -%}
+{{ super() }}
+{%- endblock meta %}
 
 {% block content %}
 <ul class="terms">
-  {% for term in terms %}
+  {%- for term in terms %}
   <li><a href="{{ term.permalink | trim_start_matches(pat=config.base_url) | safe }}">{{ term.name }}</a></li>
-  {% endfor %}
+  {%- endfor %}
 </ul>
 {% endblock content %}

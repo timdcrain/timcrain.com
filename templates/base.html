@@ -5,7 +5,7 @@
 {%- set this = page -%}
 {%- elif section -%}
 {%- set this = section -%}
-{%- endif -%}
+{%- endif %}
 
 <head>
   <meta charset="utf-8">
@@ -18,17 +18,28 @@
   <!-- Handle mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  {%- set title = "" -%}
-  {%- block title -%}
-  {%- if this and this.title -%}
+  {% block meta -%}
+  {%- if this -%}
     {%- set title = this.title -%}
+    {%- set description = this.description -%}
   {%- endif -%}
-  {%- endblock title -%}
 
-  {%- if title %}
-    {% set title = title ~ " · " %}
+  {% if title %}
+    {%- set title = title ~ " · " ~ config.title -%}
+  {% else %}
+    {%- set title = config.title -%}
   {% endif -%}
-  <title>{{ title ~ config.title }}</title>
+
+  <title>{{ title }}</title>
+  <meta name="description" content="{{ description | default(value=config.description) }}">
+  <meta property="og:type" content="{{ type | default(value="website") }}">
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:description" content="{{ description | default(value=config.description) }}">
+  {% if current_url is defined -%}
+  <meta property="og:url" content="{{ current_url | safe }}">
+  {%- endif %}
+  <meta property="og:site_name" content="{{ config.title }}">
+  {%- endblock meta %}
 
   {% if current_url is defined -%}
   <link rel="canonical" href="{{ current_url | safe }}">

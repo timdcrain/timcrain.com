@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 
-{%- block title -%}
-{% set title = term.name %}
-{%- endblock title -%}
+{% block meta -%}
+{%- set title = "Posts tagged " ~ term.name -%}
+{%- set description = "All posts about " ~ term.name -%}
+{{ super() }}
+{%- endblock meta %}
 
 {% block content %}
-<h3>Posts about <span class="term">{{ term.name }}</span></h3>
+<h3>Posts tagged <span class="term">{{ term.name }}</span></h3>
 <div class="posts-list">
 {% for page in term.pages %}
   {% include "post_summary.html" %}
