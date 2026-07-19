@@ -1,12 +1,10 @@
 +++
 title = "eBPF socket redirection"
+description = "Moving data between sockets . . . but with eBPF."
 date = 2026-07-12T21:43-07:00
 
 [taxonomies]
 tags = ["ebpf", "networking"]
-
-[extra]
-tagline = "Moving data between sockets . . . but with eBPF."
 +++
 
 I've recently been looking into improving performance for a proxy application.

@@ -1,12 +1,10 @@
 +++
 title = "impl Trait"
+description = "Existential types in Rust."
 date = 2026-02-17T22:32-08:00
 
 [taxonomies]
 tags = ["rust"]
-
-[extra]
-tagline = "Existential types in Rust."
 +++
 
 I'm a little embarrassed that I've been writing Rust for the last four years and
