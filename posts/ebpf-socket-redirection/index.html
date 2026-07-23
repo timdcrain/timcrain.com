@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <!-- Handle mobile devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>eBPF socket redirection · tim crain</title>
+  <meta name="description" content="Moving data between sockets . . . but with eBPF.">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="eBPF socket redirection · tim crain">
+  <meta property="og:description" content="Moving data between sockets . . . but with eBPF.">
+  <meta property="og:url" content="https://timcrain.com/posts/ebpf-socket-redirection/">
+  <meta property="og:site_name" content="tim crain">
+  <meta property="article:published_time" content="2026-07-12T21:43:00-07:00">
+  <meta property="article:tag" content="ebpf">
+  <meta property="article:tag" content="networking">
+
+  <link rel="canonical" href="https://timcrain.com/posts/ebpf-socket-redirection/">
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+  <link rel="stylesheet" type="text/css" href="/site.css">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+  
+</head>
+
+<body>
+  <header>
+    <nav>
+      <h2><a href="/">tim crain</a></h2>
+      <!--<h3><a href="/posts/">posts</a></h3>-->
+    </nav>
+  </header>
+
+  <main>
+    
+<article>
+  <header class="post-header">
+    <h1 class="post-title">eBPF socket redirection</h1>
+    <p class="post-tagline">Moving data between sockets . . . but with eBPF.</p>
+    <div class="post-meta">
+      <time datetime="2026-07-12T21:43:00-07:00">Jul 12, 2026</time>
+
+<time datetime="PT8M">
+  8 mins
+</time>
+
+
+      <ul class="tags">
+        <li><a href="&#x2F;tags&#x2F;ebpf&#x2F;">ebpf</a></li>
+        <li><a href="&#x2F;tags&#x2F;networking&#x2F;">networking</a></li></ul>
+    </div>
+  </header>
+
+  <p>I’ve recently been looking into improving performance for a proxy application.
+The exact details of the proxy aren’t too important, but once it finishes some
+initial setup on a new connection the only thing it does is move data from one
+TCP socket to another. This can be fairly expensive since each send and receive
+results in two syscalls and copies—just to move some data! Luckily, this is the
+sort of functionality—simple, no business logic—that is a perfect candidate to
+move into the kernel with eBPF.</p>
+<p>eBPF is a Linux<sup class="footnote-reference" id="fr-linux-1"><a href="#fn-linux">1</a></sup> mechanism that allows verified<sup class="footnote-reference" id="fr-verified-1"><a href="#fn-verified">2</a></sup> code to run
+inside the kernel. If you’ve been paying attention to Linux since about
+<a rel="noopener external" target="_blank" href="https://en.wikipedia.org/wiki/EBPF">2015</a>, you’ve most likely heard of it. While it started life as a packet
+filter (the PF in eBPF), it has been extended to a broad range of networking and
+non-networking use cases.</p>
+<p>One eBPF feature is the ability to redirect data between sockets using socket
+maps. For an application like the proxy I mentioned that primarily copies data
+from one socket to another, this allows the kernel to move the data directly to
+the target socket without any syscalls or copies. Theoretically, this should
+reduce CPU utilization and latency and improve overall
+performance.<sup class="footnote-reference" id="fr-performance-1"><a href="#fn-performance">3</a></sup></p>
+<p>I want to go into more detail on how to use this feature in an actual
+application, what problems you might run into, and whether the results actually
+deliver on the promise.</p>
+<p>But first, let’s talk about the eBPF concepts that we’re going to use.</p>
+<h2 id="socket-maps">Socket maps</h2>
+<p>Socket maps are eBPF maps that hold references to sockets.<sup class="footnote-reference" id="fr-socket-refs-1"><a href="#fn-socket-refs">4</a></sup> There
+are two types of socket maps: <a rel="noopener external" target="_blank" href="https://docs.ebpf.io/linux/map-type/BPF_MAP_TYPE_SOCKMAP/"><code>SOCKMAP</code></a>, an array-backed map that uses a
+32-bit lookup key, and <a rel="noopener external" target="_blank" href="https://docs.ebpf.io/linux/map-type/BPF_MAP_TYPE_SOCKHASH/"><code>SOCKHASH</code></a>, a hash table that can use an arbitrary
+key. <code>SOCKMAP</code> is less useful since it can’t use arbitrary keys, so we’re going
+to be focusing on <code>SOCKHASH</code>.</p>
+<p>Here’s an example <code>SOCKHASH</code> map:</p>
+<pre class="giallo" style="color-scheme: light dark; color: light-dark(#4D4D4C, #C5C8C6); background-color: light-dark(#FFFFFF, #1D1F21);"><code data-lang="c"><span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">struct</span><span> socket_key </span><span>{</span></span>
+<span class="giallo-l"><span>    __u32 src_ip</span><span>;</span></span>
+<span class="giallo-l"><span>    __u32 dst_ip</span><span>;</span></span>
+<span class="giallo-l"><span>    __u32 src_port</span><span>;</span></span>
+<span class="giallo-l"><span>    __u32 dst_port</span><span>;</span></span>
+<span class="giallo-l"><span>}</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">struct</span><span> {</span></span>
+<span class="giallo-l"><span style="color: light-dark(#4271AE, #81A2BE);">    __uint</span><span>(</span><span>type</span><span>,</span><span> BPF_MAP_TYPE_SOCKHASH</span><span>)</span><span>;</span></span>
+<span class="giallo-l"><span style="color: light-dark(#4271AE, #81A2BE);">    __uint</span><span>(</span><span>max_entries</span><span>,</span><span style="color: light-dark(#F5871F, #DE935F);"> 1024</span><span>)</span><span>;</span></span>
+<span class="giallo-l"><span style="color: light-dark(#4271AE, #81A2BE);">    __type</span><span>(</span><span>key</span><span>,</span><span style="color: light-dark(#8959A8, #B294BB);"> struct</span><span> socket_key</span><span>)</span><span>;</span></span>
+<span class="giallo-l"><span style="color: light-dark(#4271AE, #81A2BE);">    __type</span><span>(</span><span>value</span><span>,</span><span> __u64</span><span>)</span><span>;</span></span>
+<span class="giallo-l"><span>}</span><span> sock_hash </span><span style="color: light-dark(#4271AE, #81A2BE);">SEC</span><span>(</span><span style="color: light-dark(#718C00, #B5BD68);">&quot;</span><span style="color: light-dark(#718C00, #B5BD68);">.maps</span><span style="color: light-dark(#718C00, #B5BD68);">&quot;</span><span>)</span><span>;</span></span></code></pre>
+<p>The map is created with a fixed number of entries<sup class="footnote-reference" id="fr-entries-1"><a href="#fn-entries">5</a></sup>—it doesn’t
+dynamically resize like hash maps in other languages. The key can be any
+fixed-size type that can be represented as a flat sequence of bytes—i.e., no
+pointers. In this example we’re using a 4-tuple, but an eBPF program operating
+on Layer 7 messages could use an application-level identifier instead. And
+finally the value is either a 32- or 64-bit unsigned integer—the choice doesn’t
+matter too much because the sockets are put in the map either way.<sup class="footnote-reference" id="fr-value-1"><a href="#fn-value">6</a></sup></p>
+<p>Sockets can be added to the socket map from userspace with
+<code>bpf_map_update_elem</code>.<sup class="footnote-reference" id="fr-map-update-1"><a href="#fn-map-update">7</a></sup> This will associate the socket with any eBPF
+program attached to the socket map. Note that while a socket can be in multiple
+socket maps, only one of those maps can have an attached eBPF program. If
+removed from the socket map (via <code>bpf_map_delete_elem</code>), the socket will no
+longer be associated with any eBPF programs and will function as a normal
+socket.</p>
+<h2 id="verdict-programs">Verdict programs</h2>
+<p>A socket map by itself isn’t all that useful, though. If we want to actually do
+something with the sockets in the map, we have to attach a verdict program. Once
+attached, the verdict program can choose to redirect, filter, or do nothing and
+let the original socket process the data.</p>
+<p>There are two types of verdict programs: <a rel="noopener external" target="_blank" href="https://docs.ebpf.io/linux/program-type/BPF_PROG_TYPE_SK_SKB/"><code>sk_skb</code></a><sup class="footnote-reference" id="fr-skb-verdict-1"><a href="#fn-skb-verdict">8</a></sup> and
+<a rel="noopener external" target="_blank" href="https://docs.ebpf.io/linux/program-type/BPF_PROG_TYPE_SK_MSG/"><code>sk_msg</code></a>. There are some important differences between the two program
+types, which we’ll discuss below, but let’s look at an example of each first:</p>
+<pre class="giallo" style="color-scheme: light dark; color: light-dark(#4D4D4C, #C5C8C6); background-color: light-dark(#FFFFFF, #1D1F21);"><code data-lang="c"><span class="giallo-l"><span style="color: light-dark(#4271AE, #81A2BE);">SEC</span><span>(</span><span style="color: light-dark(#718C00, #B5BD68);">&quot;</span><span style="color: light-dark(#718C00, #B5BD68);">sk_skb</span><span style="color: light-dark(#718C00, #B5BD68);">&quot;</span><span>)</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">int</span><span style="color: light-dark(#4271AE, #81A2BE);"> bpf_skb_verdict_prog</span><span>(</span><span style="color: light-dark(#8959A8, #B294BB);">struct</span><span> __sk_buff </span><span style="color: light-dark(#8959A8, #B294BB);">*</span><span>skb</span><span>)</span></span>
+<span class="giallo-l"><span>{</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8E908C, #969896);">    //</span><span style="color: light-dark(#8E908C, #969896);"> Only redirect if the dst port is 8080</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">    if</span><span> (</span><span style="color: light-dark(#C82829, #CC6666);">skb</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">local_port</span><span style="color: light-dark(#8959A8, #B294BB);"> !=</span><span style="color: light-dark(#F5871F, #DE935F);"> 8080</span><span>)</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">        return</span><span> SK_PASS</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">    struct</span><span> socket_key key </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span> {</span></span>
+<span class="giallo-l"><span>        .src_ip </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span style="color: light-dark(#C82829, #CC6666);"> skb</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">remote_ip4</span><span>,</span></span>
+<span class="giallo-l"><span>        .dst_ip </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span style="color: light-dark(#C82829, #CC6666);"> skb</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">local_ip4</span><span>,</span></span>
+<span class="giallo-l"><span>        .src_port </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span style="color: light-dark(#C82829, #CC6666);"> skb</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">remote_port</span><span style="color: light-dark(#8959A8, #B294BB);"> &gt;&gt;</span><span style="color: light-dark(#F5871F, #DE935F);"> 16</span><span>,</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8E908C, #969896);">        //</span><span style="color: light-dark(#8E908C, #969896);"> local_port is in host byte order</span></span>
+<span class="giallo-l"><span>        .dst_port </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span> (</span><span style="color: light-dark(#4271AE, #81A2BE);">bpf_htonl</span><span>(</span><span style="color: light-dark(#C82829, #CC6666);">skb</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">local_port</span><span>)</span><span>)</span><span style="color: light-dark(#8959A8, #B294BB);"> &gt;&gt;</span><span style="color: light-dark(#F5871F, #DE935F);"> 16</span><span>,</span></span>
+<span class="giallo-l"><span>    }</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">    return</span><span style="color: light-dark(#4271AE, #81A2BE);"> bpf_sk_redirect_hash</span><span>(</span><span>skb</span><span>,</span><span style="color: light-dark(#8959A8, #B294BB);"> &amp;</span><span>sock_hash</span><span>,</span><span style="color: light-dark(#8959A8, #B294BB);"> &amp;</span><span>key</span><span>,</span><span> BPF_F_INGRESS</span><span>)</span><span>;</span></span>
+<span class="giallo-l"><span>}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: light-dark(#4271AE, #81A2BE);">SEC</span><span>(</span><span style="color: light-dark(#718C00, #B5BD68);">&quot;</span><span style="color: light-dark(#718C00, #B5BD68);">sk_msg</span><span style="color: light-dark(#718C00, #B5BD68);">&quot;</span><span>)</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">int</span><span style="color: light-dark(#4271AE, #81A2BE);"> bpf_msg_verdict_prog</span><span>(</span><span style="color: light-dark(#8959A8, #B294BB);">struct</span><span> sk_msg_md </span><span style="color: light-dark(#8959A8, #B294BB);">*</span><span>msg</span><span>)</span></span>
+<span class="giallo-l"><span>{</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8E908C, #969896);">    //</span><span style="color: light-dark(#8E908C, #969896);"> Only redirect if the src port is 8080</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">    if</span><span> (</span><span style="color: light-dark(#C82829, #CC6666);">msg</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">local_port</span><span style="color: light-dark(#8959A8, #B294BB);"> !=</span><span style="color: light-dark(#F5871F, #DE935F);"> 8080</span><span>)</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">        return</span><span> SK_PASS</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">    struct</span><span> socket_key key </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span> {</span></span>
+<span class="giallo-l"><span>        .src_ip </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span style="color: light-dark(#C82829, #CC6666);"> msg</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">local_ip4</span><span>,</span></span>
+<span class="giallo-l"><span>        .dst_ip </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span style="color: light-dark(#C82829, #CC6666);"> msg</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">remote_ip4</span><span>,</span></span>
+<span class="giallo-l"><span style="color: light-dark(#8E908C, #969896);">        //</span><span style="color: light-dark(#8E908C, #969896);"> local_port is in host byte order</span></span>
+<span class="giallo-l"><span>        .src_port </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span> (</span><span style="color: light-dark(#4271AE, #81A2BE);">bpf_htonl</span><span>(</span><span style="color: light-dark(#C82829, #CC6666);">msg</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">local_port</span><span>)</span><span>)</span><span style="color: light-dark(#8959A8, #B294BB);"> &gt;&gt;</span><span style="color: light-dark(#F5871F, #DE935F);"> 16</span><span>,</span></span>
+<span class="giallo-l"><span>        .dst_port </span><span style="color: light-dark(#8959A8, #B294BB);">=</span><span style="color: light-dark(#C82829, #CC6666);"> msg</span><span>-&gt;</span><span style="color: light-dark(#C82829, #CC6666);">remote_port</span><span style="color: light-dark(#8959A8, #B294BB);"> &gt;&gt;</span><span style="color: light-dark(#F5871F, #DE935F);"> 16</span><span>,</span></span>
+<span class="giallo-l"><span>    }</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: light-dark(#8959A8, #B294BB);">    return</span><span style="color: light-dark(#4271AE, #81A2BE);"> bpf_msg_redirect_hash</span><span>(</span><span>msg</span><span>,</span><span style="color: light-dark(#8959A8, #B294BB);"> &amp;</span><span>sock_hash</span><span>,</span><span style="color: light-dark(#8959A8, #B294BB);"> &amp;</span><span>key</span><span>,</span><span style="color: light-dark(#F5871F, #DE935F);"> 0</span><span>)</span><span>;</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
+<p>The programs are very similar, and in fact all of the differences are due to
+direction—the <code>sk_skb</code> program is invoked when a socket receives data while the
+<code>sk_msg</code> program is invoked when sending data to a socket.</p>
+<p>Each program accepts what eBPF calls the program context. Both <code>__sk_buff</code> and
+<code>sk_msg_md</code> are (mostly) read-only views of the corresponding kernel structs
+<code>sk_buff</code> and <code>sk_msg</code>. These structs exist because the kernel doesn’t provide a
+stable ABI for internal structs. They also ensure that the verdict program can
+only make safe mutations.</p>
+<p>Both programs are redirecting connections on local port 8080. Connections on
+other ports are untouched, and the kernel will pass them on to their original
+socket. The 4-tuple from the input is used as the lookup key, with only the
+source and destination differing to reflect the direction.</p>
+<p>The redirect is done with the eBPF helper functions <a rel="noopener external" target="_blank" href="https://docs.ebpf.io/linux/helper-function/bpf_sk_redirect_hash/"><code>bpf_sk_redirect_hash</code></a>
+and <a rel="noopener external" target="_blank" href="https://docs.ebpf.io/linux/helper-function/bpf_msg_redirect_hash/"><code>bpf_msg_redirect_hash</code></a>.<sup class="footnote-reference" id="fr-redirect-map-1"><a href="#fn-redirect-map">9</a></sup> The helper looks up the key in
+the socket map<sup class="footnote-reference" id="fr-redirect-target-1"><a href="#fn-redirect-target">10</a></sup> and, if the lookup succeeds, stores the socket
+reference in a field on the corresponding kernel struct. The helper function
+then returns <code>SK_PASS</code> to tell the kernel to continue processing the data. If
+the lookup fails, the helper returns <code>SK_DROP</code> and the data will
+(unsurprisingly) be dropped.<sup class="footnote-reference" id="fr-sk-drop-1"><a href="#fn-sk-drop">11</a></sup></p>
+<p>The redirect can either be an ingress redirect (using the <code>BPF_F_INGRESS</code> flag),
+in which case the data will be put into the target socket’s receive queue, or an
+egress redirect (no flag), in which case the data will be put into the send
+queue.</p>
+<p>Besides the direction each verdict program operates on, the other major
+difference is which socket types they support. <code>sk_skb</code> supports all socket
+types (TCP, UDP, UDS, and VSOCK) and can redirect to any socket
+type.<sup class="footnote-reference" id="fr-vsock-skb-1"><a href="#fn-vsock-skb">12</a></sup> <code>sk_msg</code> on the other hand only supports TCP sockets and can
+redirect to any socket type on ingress redirects,<sup class="footnote-reference" id="fr-vsock-msg-1"><a href="#fn-vsock-msg">13</a></sup> but only TCP
+sockets for egress redirects.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>There’s a lot more that goes into making an eBPF program work. If you want to
+learn more I highly recommend checking out <a rel="noopener external" target="_blank" href="https://youtu.be/BMsfIu-UywY">this talk</a> by one of the
+maintainers of socket maps, which goes into a lot more detail. In a future post
+I’ll compare proxies written in Rust and eBPF and find out if eBPF delivers the
+potential performance improvements.</p>
+<section class="footnotes">
+<ol class="footnotes-list">
+<li id="fn-linux">
+<p>Ok ok, Windows too. <a href="#fr-linux-1">↩</a></p>
+</li>
+<li id="fn-verified">
+<p>Verified in the sense that the code is statically analyzed for
+certain patterns (like infinite loops), not that it is signed or anything
+like that. <a href="#fr-verified-1">↩</a></p>
+</li>
+<li id="fn-performance">
+<p>If that sounds too good to be true, <a rel="noopener external" target="_blank" href="https://blog.cloudflare.com/sockmap-tcp-splicing-of-the-future/">you might be right</a>! <a href="#fr-performance-1">↩</a></p>
+</li>
+<li id="fn-socket-refs">
+<p>While most examples (guilty) use TCP or UDP sockets, socket maps
+can hold any socket type. There are restrictions on the types of sockets
+that verdict programs can use, however, which we’ll talk about later. <a href="#fr-socket-refs-1">↩</a></p>
+</li>
+<li id="fn-entries">
+<p>The hash map creates <code>max_entries</code> (rounded up to the nearest power
+of 2) buckets, and each bucket consists of a linked-list pointer and a
+spinlock for a 16-byte struct (on x86-64). The total size of all buckets
+must be less than or equal to 2<sup>32</sup> - 1 bytes, so <code>max_entries</code> can
+be at most the power of 2 below <sup>2<sup>32</sup> - 1</sup>⁄<sub>16</sub>,
+or 2<sup>27</sup>. <a href="#fr-entries-1">↩</a></p>
+</li>
+<li id="fn-value">
+<p>Unless you want to look up an element in the map from userspace, in
+which case you should use the 64-bit value. The lookup will then return a
+unique identifier for the socket called a socket cookie. <a href="#fr-value-1">↩</a></p>
+</li>
+<li id="fn-map-update">
+<p>Sockets can also be added to the map from another eBPF program
+type called <a rel="noopener external" target="_blank" href="https://docs.ebpf.io/linux/program-type/BPF_PROG_TYPE_SOCK_OPS/"><code>sockops</code></a>, which is attached to cGroups and is triggered on
+TCP connection lifecycle events. This is useful when your application
+doesn’t own the socket you want to redirect. <a href="#fr-map-update-1">↩</a></p>
+</li>
+<li id="fn-skb-verdict">
+<p>There are two different types of <code>sk_skb</code> verdict programs:
+<code>sk_skb/stream_verdict</code> and <code>sk_skb/verdict</code>. While both can function the
+same way, the former is TCP-only. <code>sk_skb/verdict</code> is a more recent
+(introduced in Linux 5.13) replacement that supports other socket types.
+The main reason to use <code>stream_verdict</code> is if the verdict needs to be made
+at Layer 7 (e.g., HTTP path-based routing), since <code>stream_verdict</code> can work
+in tandem with <code>sk_skb/stream_parser</code> which can determine Layer 7 message
+boundaries. <a href="#fr-skb-verdict-1">↩</a></p>
+</li>
+<li id="fn-redirect-map">
+<p>For programs attached to <code>SOCKMAP</code> socket maps,
+<a rel="noopener external" target="_blank" href="https://docs.ebpf.io/linux/helper-function/bpf_sk_redirect_map/"><code>bpf_sk_redirect_map</code></a> and <a rel="noopener external" target="_blank" href="https://docs.ebpf.io/linux/helper-function/bpf_msg_redirect_map/"><code>bpf_msg_redirect_map</code></a> are used instead. <a href="#fr-redirect-map-1">↩</a></p>
+</li>
+<li id="fn-redirect-target">
+<p>Note that the redirect socket does not need to be in the
+same socket map as the one that the verdict program is attached to. This can
+be useful for mixing verdict programs, e.g., using an <code>sk_skb</code> program to
+redirect ingress data to a local socket and an <code>sk_msg</code> program to redirect
+data sent from that program to an egress socket. <a href="#fr-redirect-target-1">↩</a></p>
+</li>
+<li id="fn-sk-drop">
+<p>The verdict program can always ignore the return code of the helper
+function and return <code>SK_PASS</code> if the lookup fails. In that case the kernel
+will continue processing the data on the original socket. <a href="#fr-sk-drop-1">↩</a></p>
+</li>
+<li id="fn-vsock-skb">
+<p>Except for VSOCK on ingress redirects. <a href="#fr-vsock-skb-1">↩</a></p>
+</li>
+<li id="fn-vsock-msg">
+<p>Again, except for VSOCK. <a href="#fr-vsock-msg-1">↩</a></p>
+</li>
+</ol>
+</section>
+
+</article>
+
+
+<nav class="post-nav">
+  
+  <a href="/posts/rust-impl-trait/" class="post-nav-prev">
+    <span class="post-nav-arrow">⟵</span>
+    <span class="post-nav-title">impl Trait</span>
+  </a>
+  
+
+  
+</nav>
+
+
+  </main>
+
+  <footer>
+    <a href="/atom.xml" target="_blank">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <rect x="10" y="19" width="71" height="71" fill="transparent" />
+        <circle cx="19" cy="81" r="9" fill="currentColor" />
+        <path d="M10,50 A40,40 0 0,1 50,90" stroke="currentColor" stroke-width="12" fill="none" />
+        <path d="M10,25 A65,65 0 0,1 75,90" stroke="currentColor" stroke-width="12" fill="none" />
+      </svg>
+    </a>
+    <p>
+      &copy 2026 Timothy Crain. Content on this site is licensed under
+      <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
+      <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="">
+      <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="">
+    </p>
+  </footer>
+</body>
+
+</html>

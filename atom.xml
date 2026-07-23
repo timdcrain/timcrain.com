@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>tim crain</title>
+    <subtitle>Writing about software engineering</subtitle>
+    <link rel="self" type="application/atom+xml" href="https://timcrain.com/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://timcrain.com"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2026-07-12T21:43:00-07:00</updated>
+    <id>https://timcrain.com/atom.xml</id>
+    <entry xml:lang="en">
+        <title>eBPF socket redirection</title>
+        <published>2026-07-12T21:43:00-07:00</published>
+        <updated>2026-07-12T21:43:00-07:00</updated>
+        
+        <author>
+          <name>
+            
+              Timothy Crain
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://timcrain.com/posts/ebpf-socket-redirection/"/>
+        <id>https://timcrain.com/posts/ebpf-socket-redirection/</id>
+        
+        <content type="html" xml:base="https://timcrain.com/posts/ebpf-socket-redirection/">&lt;p&gt;I’ve recently been looking into improving performance for a proxy application.
+The exact details of the proxy aren’t too important, but once it finishes some
+initial setup on a new connection the only thing it does is move data from one
+TCP socket to another. This can be fairly expensive since each send and receive
+results in two syscalls and copies—just to move some data! Luckily, this is the
+sort of functionality—simple, no business logic—that is a perfect candidate to
+move into the kernel with eBPF.&lt;&#x2F;p&gt;
+&lt;p&gt;eBPF is a Linux&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-linux-1&quot;&gt;&lt;a href=&quot;#fn-linux&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; mechanism that allows verified&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-verified-1&quot;&gt;&lt;a href=&quot;#fn-verified&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; code to run
+inside the kernel. If you’ve been paying attention to Linux since about
+&lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;EBPF&quot;&gt;2015&lt;&#x2F;a&gt;, you’ve most likely heard of it. While it started life as a packet
+filter (the PF in eBPF), it has been extended to a broad range of networking and
+non-networking use cases.&lt;&#x2F;p&gt;
+&lt;p&gt;One eBPF feature is the ability to redirect data between sockets using socket
+maps. For an application like the proxy I mentioned that primarily copies data
+from one socket to another, this allows the kernel to move the data directly to
+the target socket without any syscalls or copies. Theoretically, this should
+reduce CPU utilization and latency and improve overall
+performance.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-performance-1&quot;&gt;&lt;a href=&quot;#fn-performance&quot;&gt;3&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;I want to go into more detail on how to use this feature in an actual
+application, what problems you might run into, and whether the results actually
+deliver on the promise.&lt;&#x2F;p&gt;
+&lt;p&gt;But first, let’s talk about the eBPF concepts that we’re going to use.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;socket-maps&quot;&gt;Socket maps&lt;&#x2F;h2&gt;
+&lt;p&gt;Socket maps are eBPF maps that hold references to sockets.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-socket-refs-1&quot;&gt;&lt;a href=&quot;#fn-socket-refs&quot;&gt;4&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; There
+are two types of socket maps: &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.ebpf.io&#x2F;linux&#x2F;map-type&#x2F;BPF_MAP_TYPE_SOCKMAP&#x2F;&quot;&gt;&lt;code&gt;SOCKMAP&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;, an array-backed map that uses a
+32-bit lookup key, and &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.ebpf.io&#x2F;linux&#x2F;map-type&#x2F;BPF_MAP_TYPE_SOCKHASH&#x2F;&quot;&gt;&lt;code&gt;SOCKHASH&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;, a hash table that can use an arbitrary
+key. &lt;code&gt;SOCKMAP&lt;&#x2F;code&gt; is less useful since it can’t use arbitrary keys, so we’re going
+to be focusing on &lt;code&gt;SOCKHASH&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Here’s an example &lt;code&gt;SOCKHASH&lt;&#x2F;code&gt; map:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color-scheme: light dark; color: light-dark(#4D4D4C, #C5C8C6); background-color: light-dark(#FFFFFF, #1D1F21);&quot;&gt;&lt;code data-lang=&quot;c&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; socket_key &lt;&#x2F;span&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    __u32 src_ip&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    __u32 dst_ip&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    __u32 src_port&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    __u32 dst_port&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt;    __uint&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span&gt;type&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_TYPE_SOCKHASH&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt;    __uint&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span&gt;max_entries&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#F5871F, #DE935F);&quot;&gt; 1024&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt;    __type&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span&gt;key&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; struct&lt;&#x2F;span&gt;&lt;span&gt; socket_key&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt;    __type&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span&gt;value&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span&gt; __u64&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span&gt; sock_hash &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt;SEC&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#718C00, #B5BD68);&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#718C00, #B5BD68);&quot;&gt;.maps&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#718C00, #B5BD68);&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The map is created with a fixed number of entries&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-entries-1&quot;&gt;&lt;a href=&quot;#fn-entries&quot;&gt;5&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;—it doesn’t
+dynamically resize like hash maps in other languages. The key can be any
+fixed-size type that can be represented as a flat sequence of bytes—i.e., no
+pointers. In this example we’re using a 4-tuple, but an eBPF program operating
+on Layer 7 messages could use an application-level identifier instead. And
+finally the value is either a 32- or 64-bit unsigned integer—the choice doesn’t
+matter too much because the sockets are put in the map either way.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-value-1&quot;&gt;&lt;a href=&quot;#fn-value&quot;&gt;6&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Sockets can be added to the socket map from userspace with
+&lt;code&gt;bpf_map_update_elem&lt;&#x2F;code&gt;.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-map-update-1&quot;&gt;&lt;a href=&quot;#fn-map-update&quot;&gt;7&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; This will associate the socket with any eBPF
+program attached to the socket map. Note that while a socket can be in multiple
+socket maps, only one of those maps can have an attached eBPF program. If
+removed from the socket map (via &lt;code&gt;bpf_map_delete_elem&lt;&#x2F;code&gt;), the socket will no
+longer be associated with any eBPF programs and will function as a normal
+socket.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;verdict-programs&quot;&gt;Verdict programs&lt;&#x2F;h2&gt;
+&lt;p&gt;A socket map by itself isn’t all that useful, though. If we want to actually do
+something with the sockets in the map, we have to attach a verdict program. Once
+attached, the verdict program can choose to redirect, filter, or do nothing and
+let the original socket process the data.&lt;&#x2F;p&gt;
+&lt;p&gt;There are two types of verdict programs: &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.ebpf.io&#x2F;linux&#x2F;program-type&#x2F;BPF_PROG_TYPE_SK_SKB&#x2F;&quot;&gt;&lt;code&gt;sk_skb&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-skb-verdict-1&quot;&gt;&lt;a href=&quot;#fn-skb-verdict&quot;&gt;8&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; and
+&lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.ebpf.io&#x2F;linux&#x2F;program-type&#x2F;BPF_PROG_TYPE_SK_MSG&#x2F;&quot;&gt;&lt;code&gt;sk_msg&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;. There are some important differences between the two program
+types, which we’ll discuss below, but let’s look at an example of each first:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color-scheme: light dark; color: light-dark(#4D4D4C, #C5C8C6); background-color: light-dark(#FFFFFF, #1D1F21);&quot;&gt;&lt;code data-lang=&quot;c&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt;SEC&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#718C00, #B5BD68);&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#718C00, #B5BD68);&quot;&gt;sk_skb&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#718C00, #B5BD68);&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;int&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt; bpf_skb_verdict_prog&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; __sk_buff &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;*&lt;&#x2F;span&gt;&lt;span&gt;skb&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8E908C, #969896);&quot;&gt;    &#x2F;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8E908C, #969896);&quot;&gt; Only redirect if the dst port is 8080&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;    if&lt;&#x2F;span&gt;&lt;span&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;skb&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;local_port&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; !=&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#F5871F, #DE935F);&quot;&gt; 8080&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;        return&lt;&#x2F;span&gt;&lt;span&gt; SK_PASS&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;    struct&lt;&#x2F;span&gt;&lt;span&gt; socket_key key &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        .src_ip &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt; skb&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;remote_ip4&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        .dst_ip &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt; skb&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;local_ip4&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        .src_port &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt; skb&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;remote_port&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; &amp;gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#F5871F, #DE935F);&quot;&gt; 16&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8E908C, #969896);&quot;&gt;        &#x2F;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8E908C, #969896);&quot;&gt; local_port is in host byte order&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        .dst_port &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt;bpf_htonl&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;skb&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;local_port&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; &amp;gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#F5871F, #DE935F);&quot;&gt; 16&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;    return&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt; bpf_sk_redirect_hash&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span&gt;skb&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; &amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;sock_hash&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; &amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;key&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span&gt; BPF_F_INGRESS&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt;SEC&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#718C00, #B5BD68);&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#718C00, #B5BD68);&quot;&gt;sk_msg&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#718C00, #B5BD68);&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;int&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt; bpf_msg_verdict_prog&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; sk_msg_md &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;*&lt;&#x2F;span&gt;&lt;span&gt;msg&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8E908C, #969896);&quot;&gt;    &#x2F;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8E908C, #969896);&quot;&gt; Only redirect if the src port is 8080&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;    if&lt;&#x2F;span&gt;&lt;span&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;msg&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;local_port&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; !=&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#F5871F, #DE935F);&quot;&gt; 8080&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;        return&lt;&#x2F;span&gt;&lt;span&gt; SK_PASS&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;    struct&lt;&#x2F;span&gt;&lt;span&gt; socket_key key &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        .src_ip &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt; msg&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;local_ip4&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        .dst_ip &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt; msg&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;remote_ip4&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8E908C, #969896);&quot;&gt;        &#x2F;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8E908C, #969896);&quot;&gt; local_port is in host byte order&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        .src_port &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt;bpf_htonl&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;msg&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;local_port&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; &amp;gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#F5871F, #DE935F);&quot;&gt; 16&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        .dst_port &lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt; msg&lt;&#x2F;span&gt;&lt;span&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#C82829, #CC6666);&quot;&gt;remote_port&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; &amp;gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#F5871F, #DE935F);&quot;&gt; 16&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt;    return&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#4271AE, #81A2BE);&quot;&gt; bpf_msg_redirect_hash&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span&gt;msg&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; &amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;sock_hash&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#8959A8, #B294BB);&quot;&gt; &amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;key&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: light-dark(#F5871F, #DE935F);&quot;&gt; 0&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The programs are very similar, and in fact all of the differences are due to
+direction—the &lt;code&gt;sk_skb&lt;&#x2F;code&gt; program is invoked when a socket receives data while the
+&lt;code&gt;sk_msg&lt;&#x2F;code&gt; program is invoked when sending data to a socket.&lt;&#x2F;p&gt;
+&lt;p&gt;Each program accepts what eBPF calls the program context. Both &lt;code&gt;__sk_buff&lt;&#x2F;code&gt; and
+&lt;code&gt;sk_msg_md&lt;&#x2F;code&gt; are (mostly) read-only views of the corresponding kernel structs
+&lt;code&gt;sk_buff&lt;&#x2F;code&gt; and &lt;code&gt;sk_msg&lt;&#x2F;code&gt;. These structs exist because the kernel doesn’t provide a
+stable ABI for internal structs. They also ensure that the verdict program can
+only make safe mutations.&lt;&#x2F;p&gt;
+&lt;p&gt;Both programs are redirecting connections on local port 8080. Connections on
+other ports are untouched, and the kernel will pass them on to their original
+socket. The 4-tuple from the input is used as the lookup key, with only the
+source and destination differing to reflect the direction.&lt;&#x2F;p&gt;
+&lt;p&gt;The redirect is done with the eBPF helper functions &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.ebpf.io&#x2F;linux&#x2F;helper-function&#x2F;bpf_sk_redirect_hash&#x2F;&quot;&gt;&lt;code&gt;bpf_sk_redirect_hash&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;
+and &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.ebpf.io&#x2F;linux&#x2F;helper-function&#x2F;bpf_msg_redirect_hash&#x2F;&quot;&gt;&lt;code&gt;bpf_msg_redirect_hash&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-redirect-map-1&quot;&gt;&lt;a href=&quot;#fn-redirect-map&quot;&gt;9&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; The helper looks up the key in
+the socket map&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-redirect-target-1&quot;&gt;&lt;a href=&quot;#fn-redirect-target&quot;&gt;10&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; and, if the lookup succeeds, stores the socket
+reference in a field on the corresponding kernel struct. The helper function
+then returns &lt;code&gt;SK_PASS&lt;&#x2F;code&gt; to tell the kernel to continue processing the data. If
+the lookup fails, the helper returns &lt;code&gt;SK_DROP&lt;&#x2F;code&gt; and the data will
+(unsurprisingly) be dropped.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-sk-drop-1&quot;&gt;&lt;a href=&quot;#fn-sk-drop&quot;&gt;11&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The redirect can either be an ingress redirect (using the &lt;code&gt;BPF_F_INGRESS&lt;&#x2F;code&gt; flag),
+in which case the data will be put into the target socket’s receive queue, or an
+egress redirect (no flag), in which case the data will be put into the send
+queue.&lt;&#x2F;p&gt;
+&lt;p&gt;Besides the direction each verdict program operates on, the other major
+difference is which socket types they support. &lt;code&gt;sk_skb&lt;&#x2F;code&gt; supports all socket
+types (TCP, UDP, UDS, and VSOCK) and can redirect to any socket
+type.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-vsock-skb-1&quot;&gt;&lt;a href=&quot;#fn-vsock-skb&quot;&gt;12&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; &lt;code&gt;sk_msg&lt;&#x2F;code&gt; on the other hand only supports TCP sockets and can
+redirect to any socket type on ingress redirects,&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-vsock-msg-1&quot;&gt;&lt;a href=&quot;#fn-vsock-msg&quot;&gt;13&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; but only TCP
+sockets for egress redirects.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;There’s a lot more that goes into making an eBPF program work. If you want to
+learn more I highly recommend checking out &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;youtu.be&#x2F;BMsfIu-UywY&quot;&gt;this talk&lt;&#x2F;a&gt; by one of the
+maintainers of socket maps, which goes into a lot more detail. In a future post
+I’ll compare proxies written in Rust and eBPF and find out if eBPF delivers the
+potential performance improvements.&lt;&#x2F;p&gt;
+&lt;section class=&quot;footnotes&quot;&gt;
+&lt;ol class=&quot;footnotes-list&quot;&gt;
+&lt;li id=&quot;fn-linux&quot;&gt;
+&lt;p&gt;Ok ok, Windows too. &lt;a href=&quot;#fr-linux-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-verified&quot;&gt;
+&lt;p&gt;Verified in the sense that the code is statically analyzed for
+certain patterns (like infinite loops), not that it is signed or anything
+like that. &lt;a href=&quot;#fr-verified-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-performance&quot;&gt;
+&lt;p&gt;If that sounds too good to be true, &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;blog.cloudflare.com&#x2F;sockmap-tcp-splicing-of-the-future&#x2F;&quot;&gt;you might be right&lt;&#x2F;a&gt;! &lt;a href=&quot;#fr-performance-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-socket-refs&quot;&gt;
+&lt;p&gt;While most examples (guilty) use TCP or UDP sockets, socket maps
+can hold any socket type. There are restrictions on the types of sockets
+that verdict programs can use, however, which we’ll talk about later. &lt;a href=&quot;#fr-socket-refs-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-entries&quot;&gt;
+&lt;p&gt;The hash map creates &lt;code&gt;max_entries&lt;&#x2F;code&gt; (rounded up to the nearest power
+of 2) buckets, and each bucket consists of a linked-list pointer and a
+spinlock for a 16-byte struct (on x86-64). The total size of all buckets
+must be less than or equal to 2&lt;sup&gt;32&lt;&#x2F;sup&gt; - 1 bytes, so &lt;code&gt;max_entries&lt;&#x2F;code&gt; can
+be at most the power of 2 below &lt;sup&gt;2&lt;sup&gt;32&lt;&#x2F;sup&gt; - 1&lt;&#x2F;sup&gt;⁄&lt;sub&gt;16&lt;&#x2F;sub&gt;,
+or 2&lt;sup&gt;27&lt;&#x2F;sup&gt;. &lt;a href=&quot;#fr-entries-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-value&quot;&gt;
+&lt;p&gt;Unless you want to look up an element in the map from userspace, in
+which case you should use the 64-bit value. The lookup will then return a
+unique identifier for the socket called a socket cookie. &lt;a href=&quot;#fr-value-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-map-update&quot;&gt;
+&lt;p&gt;Sockets can also be added to the map from another eBPF program
+type called &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.ebpf.io&#x2F;linux&#x2F;program-type&#x2F;BPF_PROG_TYPE_SOCK_OPS&#x2F;&quot;&gt;&lt;code&gt;sockops&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;, which is attached to cGroups and is triggered on
+TCP connection lifecycle events. This is useful when your application
+doesn’t own the socket you want to redirect. &lt;a href=&quot;#fr-map-update-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-skb-verdict&quot;&gt;
+&lt;p&gt;There are two different types of &lt;code&gt;sk_skb&lt;&#x2F;code&gt; verdict programs:
+&lt;code&gt;sk_skb&#x2F;stream_verdict&lt;&#x2F;code&gt; and &lt;code&gt;sk_skb&#x2F;verdict&lt;&#x2F;code&gt;. While both can function the
+same way, the former is TCP-only. &lt;code&gt;sk_skb&#x2F;verdict&lt;&#x2F;code&gt; is a more recent
+(introduced in Linux 5.13) replacement that supports other socket types.
+The main reason to use &lt;code&gt;stream_verdict&lt;&#x2F;code&gt; is if the verdict needs to be made
+at Layer 7 (e.g., HTTP path-based routing), since &lt;code&gt;stream_verdict&lt;&#x2F;code&gt; can work
+in tandem with &lt;code&gt;sk_skb&#x2F;stream_parser&lt;&#x2F;code&gt; which can determine Layer 7 message
+boundaries. &lt;a href=&quot;#fr-skb-verdict-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-redirect-map&quot;&gt;
+&lt;p&gt;For programs attached to &lt;code&gt;SOCKMAP&lt;&#x2F;code&gt; socket maps,
+&lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.ebpf.io&#x2F;linux&#x2F;helper-function&#x2F;bpf_sk_redirect_map&#x2F;&quot;&gt;&lt;code&gt;bpf_sk_redirect_map&lt;&#x2F;code&gt;&lt;&#x2F;a&gt; and &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.ebpf.io&#x2F;linux&#x2F;helper-function&#x2F;bpf_msg_redirect_map&#x2F;&quot;&gt;&lt;code&gt;bpf_msg_redirect_map&lt;&#x2F;code&gt;&lt;&#x2F;a&gt; are used instead. &lt;a href=&quot;#fr-redirect-map-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-redirect-target&quot;&gt;
+&lt;p&gt;Note that the redirect socket does not need to be in the
+same socket map as the one that the verdict program is attached to. This can
+be useful for mixing verdict programs, e.g., using an &lt;code&gt;sk_skb&lt;&#x2F;code&gt; program to
+redirect ingress data to a local socket and an &lt;code&gt;sk_msg&lt;&#x2F;code&gt; program to redirect
+data sent from that program to an egress socket. &lt;a href=&quot;#fr-redirect-target-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-sk-drop&quot;&gt;
+&lt;p&gt;The verdict program can always ignore the return code of the helper
+function and return &lt;code&gt;SK_PASS&lt;&#x2F;code&gt; if the lookup fails. In that case the kernel
+will continue processing the data on the original socket. &lt;a href=&quot;#fr-sk-drop-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-vsock-skb&quot;&gt;
+&lt;p&gt;Except for VSOCK on ingress redirects. &lt;a href=&quot;#fr-vsock-skb-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-vsock-msg&quot;&gt;
+&lt;p&gt;Again, except for VSOCK. &lt;a href=&quot;#fr-vsock-msg-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;section&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>impl Trait</title>
+        <published>2026-02-17T22:32:00-08:00</published>
+        <updated>2026-02-17T22:32:00-08:00</updated>
+        
+        <author>
+          <name>
+            
+              Timothy Crain
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://timcrain.com/posts/rust-impl-trait/"/>
+        <id>https://timcrain.com/posts/rust-impl-trait/</id>
+        
+        <content type="html" xml:base="https://timcrain.com/posts/rust-impl-trait/">&lt;p&gt;I’m a little embarrassed that I’ve been writing Rust for the last four years and
+just now realized that &lt;code&gt;fn foo(arg: impl Trait)&lt;&#x2F;code&gt; is &lt;em&gt;not&lt;&#x2F;em&gt; a function accepting a
+trait object but is in fact exactly the same as &lt;code&gt;fn foo&amp;lt;T: Trait&amp;gt;(arg: T)&lt;&#x2F;code&gt;.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-dyn-trait-1&quot;&gt;&lt;a href=&quot;#fn-dyn-trait&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; It must have been a recent change, right? Oh, &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;blog.rust-lang.org&#x2F;2018&#x2F;05&#x2F;10&#x2F;Rust-1.26&#x2F;#impl-trait&quot;&gt;2018&lt;&#x2F;a&gt;.
+Anyways, why was this syntax added? I don’t think that this syntax is enough of
+an improvement&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-syntax-1&quot;&gt;&lt;a href=&quot;#fn-syntax&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; to add the complexity of a second way of doing things.&lt;&#x2F;p&gt;
+&lt;p&gt;It turns out that there were a lot of reasons,&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-rfc-1&quot;&gt;&lt;a href=&quot;#fn-rfc&quot;&gt;3&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; but one of the main reasons
+is symmetry with &lt;code&gt;impl Trait&lt;&#x2F;code&gt; in the return position, i.e. &lt;code&gt;fn foo() -&amp;gt; impl Trait&lt;&#x2F;code&gt;. This is more interesting because it is not equivalent to &lt;code&gt;fn foo&amp;lt;T: Trait&amp;gt;() -&amp;gt; T&lt;&#x2F;code&gt;. In fact, it is the complete opposite: a function returning an
+&lt;code&gt;impl Trait&lt;&#x2F;code&gt; can only return a single concrete type.&lt;&#x2F;p&gt;
+&lt;p&gt;In type theory this is an &lt;strong&gt;existential&lt;&#x2F;strong&gt; type, where the caller only knows that
+a type &lt;em&gt;exists&lt;&#x2F;em&gt; that satisfies the given abstract type.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-existential-1&quot;&gt;&lt;a href=&quot;#fn-existential&quot;&gt;4&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; In Rust,
+this allows the compiler to use the returned type as if it was a concrete type
+(e.g. static dispatch, no boxing) while hiding that from the caller. The &lt;code&gt;impl Trait&lt;&#x2F;code&gt; in the argument position is a &lt;strong&gt;universal&lt;&#x2F;strong&gt; type, where the callee must
+accept &lt;em&gt;all&lt;&#x2F;em&gt; types that satisfy the abstract type.&lt;&#x2F;p&gt;
+&lt;p&gt;Are there any real-world uses for &lt;code&gt;impl Trait&lt;&#x2F;code&gt; as a return type? There is one
+very prominent (but not obvious) example—async functions actually return an
+&lt;code&gt;impl Future&amp;lt;Output=T&amp;gt;&lt;&#x2F;code&gt;. Because futures have unique, un-writable types, they
+can only be returned either as &lt;code&gt;impl Future&amp;lt;Output=T&amp;gt;&lt;&#x2F;code&gt; or as &lt;code&gt;Box&amp;lt;dyn Future&amp;lt;Output=T&amp;gt;&amp;gt;&lt;&#x2F;code&gt;, and so the &lt;code&gt;impl Trait&lt;&#x2F;code&gt; feature allows Rust to have
+stack-allocated futures.&lt;&#x2F;p&gt;
+&lt;p&gt;Anyways, I doubt I will be writing functions that return an &lt;code&gt;impl Trait&lt;&#x2F;code&gt; very
+often, but it’s a really neat example of how Rust enables zero-cost
+abstractions.&lt;&#x2F;p&gt;
+&lt;section class=&quot;footnotes&quot;&gt;
+&lt;ol class=&quot;footnotes-list&quot;&gt;
+&lt;li id=&quot;fn-dyn-trait&quot;&gt;
+&lt;p&gt;I blame the similarity to &lt;code&gt;dyn Trait&lt;&#x2F;code&gt;. &lt;code&gt;fn foo&amp;lt;T: Trait&amp;gt;(arg: T)&lt;&#x2F;code&gt;
+is so obviously generic while &lt;code&gt;fn foo(arg: impl Trait)&lt;&#x2F;code&gt; (generic) looks very
+similar to &lt;code&gt;fn foo(arg: Box&amp;lt;dyn Trait&amp;gt;)&lt;&#x2F;code&gt; (not generic). I think I just saw
+&lt;code&gt;Trait&lt;&#x2F;code&gt; in the argument position and assumed it was the latter. &lt;a href=&quot;#fr-dyn-trait-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-syntax&quot;&gt;
+&lt;p&gt;Actually, I much prefer the more verbose syntax. It feels much more
+intentional. &lt;a href=&quot;#fr-syntax-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-rfc&quot;&gt;
+&lt;p&gt;See &lt;a rel=&quot;noopener external&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;rust-lang.github.io&#x2F;rfcs&#x2F;1951-expand-impl-trait.html&quot;&gt;RFC 1951&lt;&#x2F;a&gt; for a more in-depth discussion. &lt;a href=&quot;#fr-rfc-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-existential&quot;&gt;
+&lt;p&gt;In Rust, a function that returns an existential type can only
+return a single concrete type, but that is not a general fact about
+existential types. &lt;a href=&quot;#fr-existential-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;section&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Intro</title>
+        <published>2026-01-30T21:44:00-08:00</published>
+        <updated>2026-01-30T21:44:00-08:00</updated>
+        
+        <author>
+          <name>
+            
+              Timothy Crain
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://timcrain.com/posts/intro/"/>
+        <id>https://timcrain.com/posts/intro/</id>
+        
+        <content type="html" xml:base="https://timcrain.com/posts/intro/">&lt;p&gt;I should start by saying that this introduction is more about figuring out what
+this blog should be rather than telling you what it is. I decided to start
+writing this blog because I wanted to improve my writing and force myself to
+talk about things.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-fns-1&quot;&gt;&lt;a href=&quot;#fn-fns&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; I imagine that most people start a blog because they
+have something to say, but that doesn’t come easily for me.&lt;&#x2F;p&gt;
+&lt;p&gt;So, with that out of the way, welcome to my blog. The focus will mostly be on
+topics related to my job as a software engineer, e.g. Rust, distributed systems,
+networking, and interesting problems that I’ve solved. But I’ll also write about
+some of my other interests as well, like skiing or books I’m reading.&lt;&#x2F;p&gt;
+&lt;p&gt;One thing I don’t plan on writing much about is AI—I don’t think I have much to
+say on this subject that isn’t already being said everywhere on the Internet.
+But at the same time I doubt I can completely avoid it either.&lt;&#x2F;p&gt;
+&lt;p&gt;On that topic, I guess I should say something about my use of AI and this blog.
+Everything on this site will be written by me,&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-emdash-1&quot;&gt;&lt;a href=&quot;#fn-emdash&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; but I may use LLMs to
+review my posts or for brainstorming ideas for posts. I’m not a huge AI fan, but
+I do think they can be useful tools.&lt;sup class=&quot;footnote-reference&quot; id=&quot;fr-ai-1&quot;&gt;&lt;a href=&quot;#fn-ai&quot;&gt;3&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;&lt;&#x2F;p&gt;
+&lt;section class=&quot;footnotes&quot;&gt;
+&lt;ol class=&quot;footnotes-list&quot;&gt;
+&lt;li id=&quot;fn-fns&quot;&gt;
+&lt;p&gt;And also so that I can write footnotes. If I’m being honest that’s
+probably the real reason. &lt;a href=&quot;#fr-fns-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-emdash&quot;&gt;
+&lt;p&gt;Yes, even the em dash in the previous paragraph. &lt;a href=&quot;#fr-emdash-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li id=&quot;fn-ai&quot;&gt;
+&lt;p&gt;That will probably eventually take my job. So. &lt;a href=&quot;#fr-ai-1&quot;&gt;↩&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;section&gt;
+</content>
+        
+    </entry>
+</feed>
