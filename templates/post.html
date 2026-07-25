@@ -9,6 +9,28 @@
   <meta property="article:tag" content="{{ tag }}">
   {%- endfor -%}
   {%- endif -%}
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "{{ page.title }}",
+    "description": "{{ page.description }}",
+    "url": "{{ current_url | safe }}",
+    "datePublished": "{{ page.date }}",
+    {%- if page.updated %}
+    "dateModified": "{{ page.updated }}",
+    {%- endif %}
+    "author": {
+      "@type": "Person",
+      "name": "{{ config.author }}"
+    },
+    "publisher": {
+      "@type": "Person",
+      "name": "{{ config.author }}"
+    }
+  }
+  </script>
 {%- endblock meta %}
 
 {% block head %}
