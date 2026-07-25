@@ -59,10 +59,6 @@ code:not(pre code) {
     margin-bottom: 1em;
   }
 
-  li:last-child {
-    margin-bottom: 0;
-  }
-
   p {
     display: inline;
   }
@@ -171,9 +167,6 @@ a, a:visited, a:active {
 
 a:hover, a:focus-visible {
   color: var(--color-accent);
-}
-
-a:focus-visible {
   outline: none;
 }
 
@@ -191,6 +184,14 @@ body {
   margin: 2rem;
   font-family: var(--font-serif);
 
+  > * > :first-child {
+    margin-top: 0;
+  }
+
+  > * > :last-child {
+    margin-bottom: 0;
+  }
+
   > header {
     h2, h3 {
       margin: 0;
@@ -199,14 +200,6 @@ body {
 
   > main {
     min-width: 0;
-
-    > :first-child {
-      margin-top: 0;
-    }
-
-    > :last-child {
-      margin-bottom: 0;
-    }
 
     p {
       line-height: 1.6;
@@ -217,10 +210,6 @@ body {
   > footer {
     text-align: center;
     font-size: small;
-
-    > :last-child {
-      margin-bottom: 0;
-    }
 
     img {
       max-width: 1em;
