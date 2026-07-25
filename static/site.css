@@ -4,7 +4,7 @@
   --color-accent: light-dark(#eab700, #f0c674);
   --color-bg: light-dark(#fafafa, #141617);
   --color-border: light-dark(#e0e0e0, #2d2f31);
-  --color-fg: light-dark(#4d4d4c, #cacdcb);
+  --color-text: light-dark(#4d4d4c, #cacdcb);
   --font-mono: "JetBrains Mono", monospace;
   --font-sans: "Instrument Sans", sans-serif;
   --font-serif: "Lora", serif;
@@ -84,7 +84,7 @@ code:not(pre code) {
 }
 
 .summary-tagline {
-  color: var(--color-fg);
+  color: var(--color-text);
   margin: 0;
 }
 
@@ -114,7 +114,7 @@ code:not(pre code) {
 }
 
 .post-meta {
-  color: var(--color-fg);
+  color: var(--color-text);
   display: flex;
   font-family: var(--font-sans);
   font-size: smaller;
@@ -169,12 +169,11 @@ a, a:visited, a:active {
   color: inherit;
 }
 
-a:hover {
+a:hover, a:focus-visible {
   color: var(--color-accent);
 }
 
 a:focus-visible {
-  color: var(--color-accent);
   outline: none;
 }
 
@@ -184,7 +183,7 @@ hr {
 
 body {
   background-color: var(--color-bg);
-  color: var(--color-fg);
+  color: var(--color-text);
   display: grid;
   gap: 1.5rem;
   grid-template-columns: minmax(auto, 625px);
