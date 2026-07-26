@@ -8,7 +8,7 @@
   {%- for tag in page.taxonomies.tags %}
   <meta property="article:tag" content="{{ tag }}">
   {%- endfor -%}
-  {%- endif -%}
+  {%- endif %}
 
   <script type="application/ld+json">
   {
@@ -23,11 +23,11 @@
     {%- endif %}
     "author": {
       "@type": "Person",
-      "name": "{{ config.author }}"
-    },
-    "publisher": {
-      "@type": "Person",
-      "name": "{{ config.author }}"
+      "name": "{{ config.author }}",
+      "url": "{{ config.base_url | safe }}",
+      "sameAs": [
+        "https://github.com/timdcrain"
+      ]
     }
   }
   </script>
